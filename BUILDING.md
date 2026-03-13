@@ -150,7 +150,37 @@ Once all the edge cases were resolved:
 
 ## Phase 4: Group Management (Epic 2)
 
-*Coming soon...*
+### The Smoothest Epic So Far
+
+After the debugging marathon of Epic 1, group management was refreshingly straightforward. The database schema was already in place from Epic 0, so this was purely application logic and UI.
+
+### Server Actions for Everything
+
+Used Next.js server actions for all mutations — create group, join group, and leave group. No API routes needed. Each action validates the session, performs the database operation, and redirects. The pattern is clean and keeps everything colocated in a single `actions.ts` file.
+
+### Invite Codes
+
+Groups get a randomly generated 6-character alphanumeric code using an ambiguity-safe character set (no I/1/O/0 to avoid confusion when sharing verbally). Two ways to join:
+
+1. **Manual entry** — `/groups/join` with a text input
+2. **Shareable link** — `/join/[code]` that auto-joins authenticated users
+
+The shareable link route sits outside the `(app)` route group since unauthenticated users might click it. If they're not signed in, they're redirected to the landing page with the join code preserved as a query parameter.
+
+### Web Share API Gotcha
+
+The share button uses `navigator.share()` on mobile for native sharing. Initially passed both `text` and `url` parameters, but this caused WhatsApp (and some other messaging apps) to be excluded from the share sheet on iOS and Android.
+
+Fix: embed the URL directly in the `text` field instead of using a separate `url` parameter. This ensures all messaging apps appear as share targets.
+
+### What Was Built
+
+- **Group list** (`/groups`) — shows all groups the user belongs to with member counts. Empty state with Create/Join buttons
+- **Create group** (`/groups/new`) — simple name form, auto-generates invite code, creator becomes first member
+- **Join group** (`/groups/join`) — enter a code manually, with validation
+- **Join via link** (`/join/[code]`) — one-click join from shared links
+- **Group detail** (`/groups/[id]`) — invite code with share button, member list with Strava avatars, placeholder for rides and balances
+- **Leave group** — two-step confirmation to prevent accidental departure
 
 ---
 
