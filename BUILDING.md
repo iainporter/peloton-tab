@@ -335,10 +335,76 @@ The schema was already well-prepared — `auto_detected` on rides and `strava_ac
 
 ## Phase 8: PWA & Offline Support (Epic 6)
 
-*Coming soon...*
+The final epic turns PelotonTab from a website into something that feels like a native app on your phone.
+
+### Service Worker & Caching Strategy
+
+The service worker (built with Serwist) uses a layered caching strategy:
+
+- **CacheFirst** for Strava avatar images — cached for 7 days with a 100-entry limit. Avatars rarely change, so serving from cache keeps the app feeling instant.
+- **CacheFirst** for Next.js static assets (`/_next/static/`) — immutable bundles that are safe to cache permanently.
+- **NetworkFirst** for HTML pages, RSC payloads, and API responses — always try for fresh data, but fall back to cached versions when offline.
+- **StaleWhileRevalidate** for fonts, images, and CSS — serve cached versions immediately while updating in the background.
+
+The pre-cache manifest (`self.__SW_MANIFEST`) ensures critical assets are available from first install.
+
+### Offline Indicator
+
+A client component listens to the browser's `online`/`offline` events and displays an amber banner — "You're offline — showing cached data" — that slides in and out with a CSS transition. It sits at the top of the app shell so it's visible on every page without being intrusive.
+
+### Offline Payment Queuing
+
+The most interesting offline feature: users can log a payment even without a connection. The system uses IndexedDB (via a lightweight `offline-queue.ts` module) to store pending payments locally.
+
+When the user comes back online, a `PaymentSync` component detects the reconnection, reads all pending payments from IndexedDB, and POSTs them to `/api/payments/sync` in a single batch. Successfully synced payments are removed from the local store and the page refreshes to show the updated data.
+
+Pending payments are displayed inline on the ride detail page with a visual "pending" state so users know what hasn't synced yet.
+
+### Install Experience
+
+The web app manifest includes properly sized icons (192px and 512px), a theme colour matching the brand orange, and standalone display mode. On iOS Safari and Android Chrome, the app installs to the home screen and launches without browser chrome — no address bar, no navigation buttons. The `apple-web-app-capable` meta tag and `black-translucent` status bar style give it a native feel on iPhones.
+
+A `preconnect` hint to Strava's CDN (`dgalywyr863hv.cloudfront.net`) shaves time off avatar loads on first visit.
+
+### What Was Built
+
+- **Service worker** with tiered caching — avatars, static assets, pages, and API data each cached optimally
+- **Offline fallback page** — shown when navigating to an uncached page without a connection
+- **Offline indicator** — amber banner that appears/disappears based on connectivity
+- **Offline payment queue** — IndexedDB-backed queue with automatic sync on reconnection
+- **PWA manifest** — installable on iOS and Android with standalone display mode
 
 ---
 
 ## Conclusion
 
-*To be written once the app is complete.*
+PelotonTab went from a blank PRD to a deployed, installable PWA in seven epics — the entire journey taking under three hours. The final product lets cycling groups track shared expenses with almost no friction — sign in with Strava, create a group, share a code, and the app handles the rest.
+
+### What Went Well
+
+**The epic structure paid off.** Breaking the project into small, self-contained phases meant each one could be completed in a single focused session. Manual rides and payments (Epic 3) shipped a usable app before Strava auto-detection (Epic 5) added the magic — if the Strava integration had been blocked, there was still a working product.
+
+**Server actions kept things simple.** No REST API layer, no client-side state management, no fetch calls for mutations. Forms submit to server actions, actions hit the database, `revalidatePath` refreshes the page. The entire app has zero client-side data fetching libraries.
+
+**Schema-first design worked.** Defining all six tables in Epic 0 — including the `auto_detected` flag and `strava_activity_id` — meant later epics never had to migrate existing data. The cascade delete rules set up in the schema saved code in every delete action.
+
+### What Was Harder Than Expected
+
+**Strava OAuth** was the single biggest time sink. Between the non-standard token response, the `client_secret_post` auth method, and the corrupted environment variable on Vercel, Epic 1 took longer than Epics 2, 3, and 4 combined. The lesson: budget extra time for any third-party OAuth integration, and add a debug endpoint before you need one.
+
+**Neon driver versioning** was a quiet trap. The v0.10 → v1.0 breaking change in `@neondatabase/serverless` wasn't well documented, and the error messages didn't point to the version mismatch. Pinning the dependency early avoided pain later.
+
+### By the Numbers
+
+- **Under 3 hours** from initial idea to deployed production app — including writing the PRD, planning the epics, and implementing all seven
+- **7 epics** over the course of the build
+- **6 database tables** defined upfront, no schema changes needed after Epic 0
+- **0 client-side data fetching libraries** — server components and server actions throughout
+- **1 external API integration** (Strava) handling OAuth, activity fetch, and webhooks
+- **~30 routes** including pages, API endpoints, and server actions
+
+### AI-Assisted Development
+
+The entire project was built using Claude Code as an AI pair programmer. The approach that worked best: describe the intent clearly, let Claude generate the implementation, then review and test. The debugging sessions — particularly the Strava OAuth and Neon driver issues — were genuinely collaborative, with Claude suggesting hypotheses and debug strategies while the developer verified them against the live environment.
+
+The biggest advantage wasn't speed — it was maintaining momentum. When a debugging session would normally have meant stepping away to search docs and Stack Overflow, having Claude in the loop meant the conversation stayed focused and hypotheses were tested immediately. The biggest limitation was anything requiring visual judgement or real-device testing — PWA install flows, share sheet behaviour, and mobile layout tweaks still needed a human eye on a real phone.
