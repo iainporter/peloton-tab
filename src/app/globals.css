@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --color-orange-500: #f97316;
+  --color-orange-600: #ea580c;
+}
