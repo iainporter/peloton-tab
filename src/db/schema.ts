@@ -80,6 +80,24 @@ export const rideRiders = pgTable(
   (table) => [primaryKey({ columns: [table.rideId, table.userId] })],
 );
 
+export const stravaActivities = pgTable("strava_activities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  stravaActivityId: bigint("strava_activity_id", { mode: "number" })
+    .notNull()
+    .unique(),
+  title: text("title"),
+  startDate: timestamp("start_date", { withTimezone: true }).notNull(),
+  elapsedTime: integer("elapsed_time"), // seconds
+  startLat: text("start_lat"), // stored as text to avoid float precision issues
+  startLng: text("start_lng"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const payments = pgTable("payments", {
   id: uuid("id").defaultRandom().primaryKey(),
   rideId: uuid("ride_id")

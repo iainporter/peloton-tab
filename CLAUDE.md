@@ -101,7 +101,7 @@ Migrations managed via Drizzle Kit:
 - [x] Epic 2: Group Management
 - [x] Epic 3: Manual Rides & Payments
 - [x] Epic 4: Balances & Activity Feed
-- [ ] Epic 5: Strava Ride Detection
+- [x] Epic 5: Strava Ride Detection
 - [ ] Epic 6: PWA & Offline Support
 
 ## Conventions

@@ -298,7 +298,38 @@ This was the most straightforward epic so far — no external APIs, no OAuth qui
 
 ## Phase 7: Strava Ride Detection (Epic 5)
 
-*Coming soon...*
+Epic 5 brings the core differentiator — automatic ride detection. Instead of manually logging every ride, PelotonTab now listens to Strava and figures out who rode together.
+
+### Webhook Pipeline
+
+The foundation is a Strava webhook subscription. Strava sends a POST to `/api/strava/webhook` whenever any registered user records an activity. The GET handler responds to Strava's verification challenge, and the POST handler processes incoming events.
+
+When an `activity:create` event arrives, the handler:
+1. Looks up the user by their Strava athlete ID
+2. Refreshes their access token if needed
+3. Fetches the full activity details from the Strava API
+4. Filters for ride-type activities only
+5. Stores the activity (start time, location, elapsed time) in a new `strava_activities` table
+
+### Matching Algorithm
+
+The matching algorithm checks the incoming activity against recent activities from other members of the user's groups. Two activities are considered a match when:
+- Start times are within **30 minutes** of each other
+- Start locations are within **1km** (haversine distance)
+
+If either activity is missing GPS data, the algorithm falls back to time-only matching. When matches are found, the algorithm either adds the rider to an existing auto-detected ride for that date/group, or creates a new one.
+
+### Auto-Detected Ride UX
+
+Auto-detected rides appear in the group activity feed with an orange "Strava" badge. They behave exactly like manual rides — users can edit participants, add payments, and delete them. The `auto_detected` flag and `strava_activity_id` on each rider entry provide the link back to Strava.
+
+### Backfill on Group Join
+
+When a user joins a group, the app fetches their last 7 days of Strava activities and runs the matching algorithm. This means if two friends have been riding together before creating a PelotonTab group, those rides get picked up automatically.
+
+### What Worked Well
+
+The schema was already well-prepared — `auto_detected` on rides and `strava_activity_id` on ride_riders were there from Epic 0. The new `strava_activities` table stores just enough data for matching without duplicating Strava's full activity model. The fire-and-forget pattern for backfill on join keeps the UX snappy while the matching runs in the background.
 
 ---
 

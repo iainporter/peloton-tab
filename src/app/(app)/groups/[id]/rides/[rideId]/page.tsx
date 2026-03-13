@@ -87,9 +87,16 @@ export default async function RideDetailPage({
           </svg>
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            {ride.title || dateStr}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900">
+              {ride.title || dateStr}
+            </h1>
+            {ride.autoDetected && (
+              <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                Strava
+              </span>
+            )}
+          </div>
           {ride.title && (
             <p className="text-sm text-gray-500">{dateStr}</p>
           )}

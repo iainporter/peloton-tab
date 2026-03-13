@@ -6,6 +6,7 @@ import { groups, groupMembers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { backfillRecentActivities } from "@/lib/backfill";
 
 function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/1/O/0 confusion
@@ -78,6 +79,9 @@ export async function joinGroup(formData: FormData) {
     userId: session.user.id,
   });
 
+  // Backfill recent Strava activities (fire-and-forget)
+  backfillRecentActivities(session.user.id).catch(console.error);
+
   redirect(`/groups/${group.id}`);
 }
 
@@ -109,6 +113,9 @@ export async function joinGroupByCode(code: string) {
       groupId: group.id,
       userId: session.user.id,
     });
+
+    // Backfill recent Strava activities (fire-and-forget)
+    backfillRecentActivities(session.user.id).catch(console.error);
   }
 
   redirect(`/groups/${group.id}`);

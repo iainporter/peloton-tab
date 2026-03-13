@@ -60,6 +60,7 @@ export default async function GroupDetailPage({
         id: rides.id,
         date: rides.date,
         title: rides.title,
+        autoDetected: rides.autoDetected,
       })
       .from(rides)
       .where(eq(rides.groupId, id))
@@ -224,9 +225,16 @@ export default async function GroupDetailPage({
                   <Card className="hover:border-orange-200 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {ride.title || dateStr}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-gray-900">
+                            {ride.title || dateStr}
+                          </p>
+                          {ride.autoDetected && (
+                            <span className="inline-flex items-center rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                              Strava
+                            </span>
+                          )}
+                        </div>
                         {ride.title && (
                           <p className="text-xs text-gray-500">{dateStr}</p>
                         )}
