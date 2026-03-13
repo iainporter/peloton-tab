@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,7 +11,13 @@ const navItems = [
   { href: "/profile", label: "Profile", icon: UserIcon },
 ];
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  user,
+}: {
+  children: ReactNode;
+  user?: { name?: string | null; image?: string | null };
+}) {
   const pathname = usePathname();
 
   return (
@@ -20,6 +27,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/groups" className="text-lg font-bold text-gray-900">
             PelotonTab
           </Link>
+          {user && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">{user.name}</span>
+              {user.image && (
+                <Image
+                  src={user.image}
+                  alt={user.name || "Avatar"}
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              )}
+            </div>
+          )}
         </div>
       </header>
 
