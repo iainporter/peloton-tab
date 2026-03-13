@@ -12,9 +12,7 @@ export function CopyInviteCode({ code }: { code: string }) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join my PelotonTab group",
-          text: `Join my cycling group on PelotonTab! Use code: ${code}`,
-          url: shareUrl,
+          text: `Join my cycling group on PelotonTab! Use code: ${code}\n${shareUrl}`,
         });
         return;
       } catch {
