@@ -8,6 +8,11 @@ import { Card, Button } from "@/components/ui";
 import { LeaveGroupButton } from "./leave-button";
 import { CopyInviteCode } from "./copy-invite";
 import Link from "next/link";
+import { getGroupBalances } from "@/lib/balances";
+
+function formatAmount(pence: number) {
+  return `£${(Math.abs(pence) / 100).toFixed(2)}`;
+}
 
 export default async function GroupDetailPage({
   params,
@@ -48,34 +53,50 @@ export default async function GroupDetailPage({
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, id));
 
-  const recentRides = await db
-    .select({
-      id: rides.id,
-      date: rides.date,
-      title: rides.title,
-    })
-    .from(rides)
-    .where(eq(rides.groupId, id))
-    .orderBy(desc(rides.date))
-    .limit(5);
+  const [balances, allRides] = await Promise.all([
+    getGroupBalances(id),
+    db
+      .select({
+        id: rides.id,
+        date: rides.date,
+        title: rides.title,
+      })
+      .from(rides)
+      .where(eq(rides.groupId, id))
+      .orderBy(desc(rides.date)),
+  ]);
 
-  // Get rider counts and payment totals for each ride
+  // Build balance map for quick lookup
+  const balanceMap = new Map(balances.map((b) => [b.userId, b]));
+
+  // Get rider counts, payment details, and rider names for each ride (activity feed)
   const rideDetails = await Promise.all(
-    recentRides.map(async (ride) => {
-      const riderCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(rideRiders)
-        .where(eq(rideRiders.rideId, ride.id));
+    allRides.map(async (ride) => {
+      const [riderRows, paymentRows] = await Promise.all([
+        db
+          .select({ userId: rideRiders.userId, name: users.name })
+          .from(rideRiders)
+          .innerJoin(users, eq(users.id, rideRiders.userId))
+          .where(eq(rideRiders.rideId, ride.id)),
+        db
+          .select({
+            amount: payments.amount,
+            payerName: users.name,
+          })
+          .from(payments)
+          .innerJoin(users, eq(users.id, payments.paidBy))
+          .where(eq(payments.rideId, ride.id)),
+      ]);
 
-      const totalPayments = await db
-        .select({ total: sql<number>`coalesce(sum(${payments.amount}), 0)` })
-        .from(payments)
-        .where(eq(payments.rideId, ride.id));
+      const totalPence = paymentRows.reduce((s, p) => s + p.amount, 0);
 
       return {
         ...ride,
-        riderCount: Number(riderCount[0].count),
-        totalPence: Number(totalPayments[0].total),
+        riders: riderRows,
+        riderCount: riderRows.length,
+        payments: paymentRows,
+        totalPence,
+        perPerson: riderRows.length > 0 ? totalPence / riderRows.length : 0,
       };
     }),
   );
@@ -104,50 +125,75 @@ export default async function GroupDetailPage({
         </div>
       </Card>
 
-      {/* Members */}
+      {/* Balances */}
       <div>
         <h2 className="mb-3 text-sm font-semibold text-gray-500 uppercase tracking-wide">
-          Members
+          Balances
         </h2>
-        <Card className="divide-y divide-gray-100 p-0">
-          {members.map((member) => (
-            <div
-              key={member.id}
-              className="flex items-center gap-3 px-4 py-3"
-            >
-              {member.avatarUrl ? (
-                <Image
-                  src={member.avatarUrl}
-                  alt={member.name}
-                  width={36}
-                  height={36}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-orange-600">
-                    {member.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  {member.name}
-                  {member.id === group.createdBy && (
-                    <span className="ml-2 text-xs text-gray-400">Creator</span>
+        {balances.length === 0 ? (
+          <Card>
+            <p className="text-sm text-gray-400 text-center py-2">
+              No payments yet — balances will appear here
+            </p>
+          </Card>
+        ) : (
+          <Card className="divide-y divide-gray-100 p-0">
+            {members.map((member) => {
+              const bal = balanceMap.get(member.id);
+              const balance = bal?.balance ?? 0;
+              return (
+                <Link
+                  key={member.id}
+                  href={`/groups/${id}/members/${member.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50"
+                >
+                  {member.avatarUrl ? (
+                    <Image
+                      src={member.avatarUrl}
+                      alt={member.name}
+                      width={36}
+                      height={36}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center">
+                      <span className="text-sm font-medium text-orange-600">
+                        {member.name.charAt(0)}
+                      </span>
+                    </div>
                   )}
-                </p>
-              </div>
-            </div>
-          ))}
-        </Card>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {member.name}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold ${
+                      balance > 0
+                        ? "text-green-600"
+                        : balance < 0
+                          ? "text-red-600"
+                          : "text-gray-400"
+                    }`}
+                  >
+                    {balance === 0
+                      ? "even"
+                      : balance > 0
+                        ? `+${formatAmount(balance)}`
+                        : `-${formatAmount(balance)}`}
+                  </span>
+                </Link>
+              );
+            })}
+          </Card>
+        )}
       </div>
 
-      {/* Recent Rides */}
+      {/* Activity Feed */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-            Recent Rides
+            Activity
           </h2>
           <Link
             href={`/groups/${id}/rides/new`}
@@ -161,7 +207,7 @@ export default async function GroupDetailPage({
             No rides yet — log your first ride!
           </p>
         ) : (
-          <Card className="divide-y divide-gray-100 p-0">
+          <div className="space-y-3">
             {rideDetails.map((ride) => {
               const rideDate = new Date(ride.date + "T00:00:00");
               const dateStr = rideDate.toLocaleDateString("en-GB", {
@@ -173,28 +219,46 @@ export default async function GroupDetailPage({
                 <Link
                   key={ride.id}
                   href={`/groups/${id}/rides/${ride.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                  className="block"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {ride.title || dateStr}
-                    </p>
-                    {ride.title && (
-                      <p className="text-xs text-gray-500">{dateStr}</p>
+                  <Card className="hover:border-orange-200 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {ride.title || dateStr}
+                        </p>
+                        {ride.title && (
+                          <p className="text-xs text-gray-500">{dateStr}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          {ride.riders.map((r) => r.name.split(" ")[0]).join(", ")}
+                        </p>
+                      </div>
+                      {ride.totalPence > 0 && (
+                        <div className="text-right ml-3 shrink-0">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {formatAmount(ride.totalPence)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatAmount(ride.perPerson)}/ea
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {ride.payments.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        {ride.payments.map((p, i) => (
+                          <p key={i} className="text-xs text-gray-500">
+                            {p.payerName} paid {formatAmount(p.amount)}
+                          </p>
+                        ))}
+                      </div>
                     )}
-                    <p className="text-xs text-gray-400">
-                      {ride.riderCount} {ride.riderCount === 1 ? "rider" : "riders"}
-                    </p>
-                  </div>
-                  {ride.totalPence > 0 && (
-                    <span className="text-sm font-semibold text-gray-900">
-                      £{(ride.totalPence / 100).toFixed(2)}
-                    </span>
-                  )}
+                  </Card>
                 </Link>
               );
             })}
-          </Card>
+          </div>
         )}
       </div>
 

@@ -252,7 +252,47 @@ The group detail page's "Recent Rides" placeholder was replaced with a live ride
 
 ## Phase 6: Balances & Activity Feed (Epic 4)
 
-*Coming soon...*
+With rides and payments in place, the next natural question is: who owes what? Epic 4 adds the financial visibility layer.
+
+### Balance Calculation Engine
+
+The core logic lives in `src/lib/balances.ts`. For each group member:
+- **Credit** = total of all payments they've made across rides in the group
+- **Debit** = sum of their per-person share for each ride they participated in (total payments for that ride / number of riders)
+- **Balance** = credit minus debit
+
+A positive balance means others owe you; negative means you owe the group. The calculation fetches all rides, payments, and participation data in bulk queries rather than per-member, keeping it efficient.
+
+### Balance Summary on Group Page
+
+The group detail page now shows a **Balances** section prominently. Each member is listed with their net balance — green for positive, red for negative, grey for even. Tapping a member navigates to their payment history.
+
+### Member Payment History
+
+A new page at `/groups/[id]/members/[userId]` provides a detailed breakdown for any group member:
+- Net balance with credit/debit split
+- Full list of payments they've made (with amounts and notes)
+- All rides they've participated in
+
+This makes it transparent exactly why someone's balance is what it is.
+
+### Activity Feed
+
+The "Recent Rides" section has been upgraded to a full **Activity Feed** showing:
+- All rides (not just the 5 most recent)
+- Who rode on each ride (first names listed)
+- Payment breakdown per ride with payer names
+- Per-person share calculation
+
+Each entry is a tappable card linking to the ride detail page.
+
+### Group List Balance Preview
+
+The groups list page now shows each group's balance next to the group name. A quick green `+£x.xx` or red `-£x.xx` tells you at a glance where you stand, without needing to tap into the group.
+
+### What Worked Well
+
+This was the most straightforward epic so far — no external APIs, no OAuth quirks, just data aggregation and display. The existing schema from Epic 3 had everything needed. The balance calculation is done in application code rather than complex SQL, which keeps it readable and testable. Building the entire epic took a single pass with no debugging detours.
 
 ---
 

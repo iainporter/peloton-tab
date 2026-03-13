@@ -4,6 +4,11 @@ import { groups, groupMembers, users } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import { Card, Button, EmptyState } from "@/components/ui";
+import { getUserGroupBalance } from "@/lib/balances";
+
+function formatAmount(pence: number) {
+  return `£${(Math.abs(pence) / 100).toFixed(2)}`;
+}
 
 export default async function GroupsPage() {
   const session = await auth();
@@ -45,6 +50,14 @@ export default async function GroupsPage() {
     );
   }
 
+  // Fetch user's balance for each group
+  const groupsWithBalances = await Promise.all(
+    myGroups.map(async (group) => {
+      const balance = await getUserGroupBalance(group.id, session.user!.id!);
+      return { ...group, balance };
+    }),
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -61,7 +74,7 @@ export default async function GroupsPage() {
         </div>
       </div>
 
-      {myGroups.map((group) => (
+      {groupsWithBalances.map((group) => (
         <Link key={group.id} href={`/groups/${group.id}`}>
           <Card className="hover:border-orange-200 transition-colors">
             <div className="flex items-center justify-between">
@@ -71,7 +84,18 @@ export default async function GroupsPage() {
                   {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
                 </p>
               </div>
-              <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+              <div className="flex items-center gap-2">
+                {group.balance !== 0 && (
+                  <span
+                    className={`text-sm font-semibold ${
+                      group.balance > 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {group.balance > 0 ? "+" : "-"}{formatAmount(group.balance)}
+                  </span>
+                )}
+                <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+              </div>
             </div>
           </Card>
         </Link>
