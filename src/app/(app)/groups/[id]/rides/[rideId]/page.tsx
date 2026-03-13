@@ -9,6 +9,7 @@ import Link from "next/link";
 import { DeleteRideButton } from "./components/delete-ride-button";
 import { DeletePaymentButton } from "./components/delete-payment-button";
 import { EditPaymentButton } from "./components/edit-payment-button";
+import { PendingPayments } from "@/components/pending-payments";
 
 export default async function RideDetailPage({
   params,
@@ -199,6 +200,9 @@ export default async function RideDetailPage({
           </Card>
         )}
       </div>
+
+      {/* Pending offline payments */}
+      <PendingPayments rideId={rideId} />
 
       {/* Summary */}
       {ridePayments.length > 0 && (

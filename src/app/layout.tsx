@@ -14,10 +14,16 @@ export const metadata: Metadata = {
   applicationName: "PelotonTab",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "PelotonTab",
   },
+  icons: {
+    apple: [{ url: "/icons/icon-192.png" }],
+  },
   manifest: "/manifest.json",
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
@@ -34,6 +40,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://dgalywyr863hv.cloudfront.net" />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <SerwistProvider swUrl="/serwist/sw.js">
           {children}

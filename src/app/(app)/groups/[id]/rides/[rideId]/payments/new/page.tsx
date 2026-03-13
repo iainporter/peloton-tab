@@ -3,8 +3,8 @@ import { db } from "@/db";
 import { rides, groupMembers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { Button, Input } from "@/components/ui";
 import { addPayment } from "../../../../actions";
+import { PaymentForm } from "@/components/payment-form";
 import Link from "next/link";
 
 export default async function NewPaymentPage({
@@ -53,33 +53,11 @@ export default async function NewPaymentPage({
         <h1 className="text-xl font-bold text-gray-900">Add Payment</h1>
       </div>
 
-      <form action={addPaymentBound} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Amount
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-              £
-            </span>
-            <input
-              type="number"
-              name="amount"
-              step="0.01"
-              min="0.01"
-              required
-              placeholder="0.00"
-              className="w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-        </div>
-
-        <Input label="Note (optional)" name="note" placeholder="e.g. Coffee and cake" />
-
-        <Button type="submit" className="w-full">
-          Add Payment
-        </Button>
-      </form>
+      <PaymentForm
+        groupId={groupId}
+        rideId={rideId}
+        addPaymentAction={addPaymentBound}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { PaymentSync } from "@/components/payment-sync";
 import { auth } from "@/lib/auth";
 import type { ReactNode } from "react";
 
@@ -7,6 +8,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <AppShell user={session?.user}>
+      <PaymentSync />
       {children}
     </AppShell>
   );

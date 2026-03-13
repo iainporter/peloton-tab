@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { OfflineIndicator } from "./offline-indicator";
 
 const navItems = [
   { href: "/groups", label: "Groups", icon: UsersIcon },
@@ -43,6 +44,8 @@ export function AppShell({
           )}
         </div>
       </header>
+
+      <OfflineIndicator />
 
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-4">
         {children}
