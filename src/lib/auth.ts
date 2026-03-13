@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  trustHost: true,
+  debug: process.env.NODE_ENV === "development",
   providers: [Strava()],
   callbacks: {
     async jwt({ token, account, profile }) {
