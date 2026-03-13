@@ -186,7 +186,67 @@ Fix: embed the URL directly in the `text` field instead of using a separate `url
 
 ## Phase 5: Manual Rides & Payments (Epic 3)
 
-*Coming soon...*
+### The Core Loop
+
+This is the epic that makes the app actually useful. Everything before it was infrastructure and scaffolding — now users can log who rode together, record who paid for the coffees, and see the per-person split.
+
+### Nested Route Structure
+
+Rides belong to groups, and payments belong to rides, so the routes mirror that hierarchy:
+
+```
+/groups/[id]/rides/new              → Log a new ride
+/groups/[id]/rides/[rideId]         → Ride detail with payments
+/groups/[id]/rides/[rideId]/edit    → Edit who rode
+/groups/[id]/rides/[rideId]/payments/new → Add a payment
+```
+
+This keeps everything scoped under the group — every page inherits the group ID from the URL and verifies the current user is a member before showing anything.
+
+### Server Actions (Again)
+
+Followed the same pattern established in Epic 2: a single `actions.ts` file with all the ride and payment mutations. Six actions in total — `createRide`, `deleteRide`, `updateRideParticipants`, `addPayment`, `editPayment`, `deletePayment`.
+
+Every action starts with a `requireGroupMember(groupId)` check that validates both authentication and group membership. This is a helper extracted to avoid repeating the same two queries across all six actions.
+
+### Participant Picker
+
+The create ride form shows all group members as checkboxes, all checked by default (since most rides involve everyone). The form uses `name="participants"` with multiple checkbox values, and the server action extracts them with `formData.getAll("participants")`.
+
+This pattern also powers the edit riders page — same checkboxes, but pre-checked based on the current ride participants.
+
+### Money Handling
+
+Amounts are stored in pence (integers) to avoid floating-point issues. The user enters pounds (e.g. "4.50"), the server action multiplies by 100, and the display divides by 100 with `.toFixed(2)`. The `£` symbol is positioned inside the input field using absolute positioning for a clean look.
+
+Per-person share is simply `totalPayments / numberOfRiders` — displayed on the ride detail page in an orange accent colour to make it stand out.
+
+### Cascade Deletes
+
+The schema was designed with `onDelete: "cascade"` on the `ride_riders` and `payments` foreign keys back in Epic 0. This means deleting a ride automatically cleans up all its riders and payments — no manual cleanup needed in the delete action. A small upfront schema decision that paid off here.
+
+### Client Components for Interactivity
+
+Three client components handle the interactive bits:
+- **Delete ride button** — two-step confirmation (same pattern as leave group from Epic 2)
+- **Delete payment button** — small X icon, immediate deletion
+- **Edit payment dialog** — bottom sheet modal for updating amount and note inline
+
+The edit payment component uses a fixed overlay (`fixed inset-0`) with a white card anchored to the bottom — a mobile-friendly pattern that feels native on phones.
+
+### Group Detail Upgrade
+
+The group detail page's "Recent Rides" placeholder was replaced with a live ride list showing the 5 most recent rides ordered by date. Each ride displays its title (or date if untitled), rider count, and total spend. Tapping a ride navigates to its detail page.
+
+### What Was Built
+
+- **Log a ride** — date picker (defaults to today), optional title, participant checkboxes
+- **Ride detail** — rider avatars, payment list with payer/amount/note, per-person share calculation
+- **Add payment** — pound amount input (converted to pence), optional note, attributed to current user
+- **Edit/delete payments** — inline edit modal, delete with single tap
+- **Edit riders** — update who participated after the fact
+- **Delete ride** — confirmation dialog, cascade-deletes all payments
+- **Ride list** — recent rides on group detail page with spend totals
 
 ---
 
