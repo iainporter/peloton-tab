@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { SerwistProvider } from "./serwist";
 import "./globals.css";
 
 const inter = Inter({
@@ -10,6 +11,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "PelotonTab",
   description: "Track shared expenses on group cycling rides",
+  applicationName: "PelotonTab",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PelotonTab",
+  },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -27,7 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <SerwistProvider swUrl="/serwist/sw.js">
+          {children}
+        </SerwistProvider>
       </body>
     </html>
   );
