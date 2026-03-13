@@ -5,6 +5,7 @@ Bootstrap the Next.js project with all core tooling, database, and deployment pi
 
 ## Stories
 
+
 ### 0.1 — Initialise Next.js project
 - Create Next.js app with TypeScript, App Router, Tailwind CSS
 - Configure ESLint and Prettier
