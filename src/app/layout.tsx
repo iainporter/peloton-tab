@@ -18,6 +18,10 @@ export const metadata: Metadata = {
     title: "PelotonTab",
   },
   icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
     apple: [{ url: "/icons/icon-192.png" }],
   },
   manifest: "/manifest.json",
