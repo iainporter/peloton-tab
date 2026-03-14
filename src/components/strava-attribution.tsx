@@ -4,7 +4,7 @@ import Link from "next/link";
 export function StravaAttribution() {
   return (
     <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-      <div className="mx-auto flex max-w-lg items-center justify-between">
+      <div className="mx-auto flex max-w-lg flex-col items-center gap-2">
         <a
           href="https://www.strava.com"
           target="_blank"
