@@ -145,10 +145,15 @@ export async function deletePayment(
   revalidatePath(`/groups/${groupId}/rides/${rideId}`);
 }
 
-export async function syncStravaRides(groupId: string) {
+export async function syncStravaRides(groupId: string): Promise<{ success: boolean; message: string }> {
   const userId = await requireGroupMember(groupId);
 
-  await backfillRecentActivities(userId);
-
-  revalidatePath(`/groups/${groupId}`);
+  try {
+    const result = await backfillRecentActivities(userId);
+    revalidatePath(`/groups/${groupId}`);
+    return { success: true, message: `Synced ${result.synced} new ride${result.synced === 1 ? "" : "s"} from Strava` };
+  } catch (error) {
+    console.error("Strava sync failed:", error);
+    return { success: false, message: "Failed to sync from Strava. Please try again." };
+  }
 }
