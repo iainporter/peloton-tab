@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { OfflineIndicator } from "./offline-indicator";
+import { StravaAttribution } from "./strava-attribution";
 
 const navItems = [
   { href: "/groups", label: "Groups", icon: UsersIcon },
@@ -50,6 +51,8 @@ export function AppShell({
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-4">
         {children}
       </main>
+
+      <StravaAttribution />
 
       <nav className="sticky bottom-0 border-t border-gray-200 bg-white">
         <div className="mx-auto flex max-w-lg">

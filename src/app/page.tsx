@@ -1,5 +1,7 @@
 import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 
 export default async function Home() {
   const session = await auth();
@@ -21,23 +23,34 @@ export default async function Home() {
             await signIn("strava", { redirectTo: "/groups" });
           }}
         >
-          <button
-            type="submit"
-            className="inline-flex items-center gap-3 rounded-lg bg-[#FC4C02] px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-[#e04402] transition-colors"
-          >
-            <StravaLogo />
-            Sign in with Strava
+          <button type="submit" className="transition-opacity hover:opacity-90">
+            <Image
+              src="/strava/btn_strava_connect_with_orange.svg"
+              alt="Connect with Strava"
+              width={237}
+              height={48}
+              priority
+            />
           </button>
         </form>
+        <div className="mt-12 flex flex-col items-center gap-3">
+          <a
+            href="https://www.strava.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              src="/strava/api_logo_pwrdBy_strava_horiz_orange.svg"
+              alt="Powered by Strava"
+              width={162}
+              height={16}
+            />
+          </a>
+          <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 underline">
+            Privacy Policy
+          </Link>
+        </div>
       </main>
     </div>
-  );
-}
-
-function StravaLogo() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
-    </svg>
   );
 }
