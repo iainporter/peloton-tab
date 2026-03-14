@@ -21,9 +21,9 @@ export function StravaAttribution() {
           <Link href="/privacy" className="hover:text-gray-600">
             Privacy
           </Link>
-          <a href="mailto:support@pelotontab.com" className="hover:text-gray-600">
-            Contact
-          </a>
+          <Link href="/support" className="hover:text-gray-600">
+            Support
+          </Link>
         </div>
       </div>
     </div>

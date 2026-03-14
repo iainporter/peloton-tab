@@ -11,6 +11,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { backfillRecentActivities } from "@/lib/backfill";
 
 async function requireGroupMember(groupId: string) {
   const session = await auth();
@@ -142,4 +143,12 @@ export async function deletePayment(
   await db.delete(payments).where(eq(payments.id, paymentId));
 
   revalidatePath(`/groups/${groupId}/rides/${rideId}`);
+}
+
+export async function syncStravaRides(groupId: string) {
+  const userId = await requireGroupMember(groupId);
+
+  await backfillRecentActivities(userId);
+
+  revalidatePath(`/groups/${groupId}`);
 }

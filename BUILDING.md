@@ -327,6 +327,10 @@ Auto-detected rides appear in the group activity feed with an orange "Strava" ba
 
 When a user joins a group, the app fetches their last 7 days of Strava activities and runs the matching algorithm. This means if two friends have been riding together before creating a PelotonTab group, those rides get picked up automatically.
 
+### Manual Sync Fallback
+
+Strava webhooks aren't instant — delays of 5–30 minutes are common, and longer during peak times. Rather than making users wait, a "Sync Strava" button on the group detail page lets riders manually trigger a sync. It calls the same backfill function used on group join — fetching the last 7 days of activities from the Strava API and running the matching algorithm. The button sits next to "Log a ride" in the Activity section header, with a loading state while the sync runs.
+
 ### What Worked Well
 
 The schema was already well-prepared — `auto_detected` on rides and `strava_activity_id` on ride_riders were there from Epic 0. The new `strava_activities` table stores just enough data for matching without duplicating Strava's full activity model. The fire-and-forget pattern for backfill on join keeps the UX snappy while the matching runs in the background.

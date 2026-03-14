@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Card, Button } from "@/components/ui";
 import { LeaveGroupButton } from "./leave-button";
 import { CopyInviteCode } from "./copy-invite";
+import { SyncStravaButton } from "./sync-button";
 import Link from "next/link";
 import { getGroupBalances } from "@/lib/balances";
 
@@ -196,12 +197,15 @@ export default async function GroupDetailPage({
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             Activity
           </h2>
-          <Link
-            href={`/groups/${id}/rides/new`}
-            className="text-sm text-orange-500 hover:text-orange-600 font-medium"
-          >
-            Log a ride
-          </Link>
+          <div className="flex items-center gap-3">
+            <SyncStravaButton groupId={id} />
+            <Link
+              href={`/groups/${id}/rides/new`}
+              className="text-sm text-orange-500 hover:text-orange-600 font-medium"
+            >
+              Log a ride
+            </Link>
+          </div>
         </div>
         {rideDetails.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4">
