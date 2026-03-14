@@ -24,39 +24,37 @@ export async function backfillRecentActivities(userId: string): Promise<{ synced
     // Only process rides
     if (activity.type !== "Ride") continue;
 
-    // Skip if we already have this activity stored
+    const startLat = activity.start_latlng?.[0]?.toString() ?? null;
+    const startLng = activity.start_latlng?.[1]?.toString() ?? null;
+    const startDate = new Date(activity.start_date);
+
+    // Store the activity if new
     const [existing] = await db
       .select({ id: stravaActivities.id })
       .from(stravaActivities)
       .where(eq(stravaActivities.stravaActivityId, activity.id))
       .limit(1);
 
-    if (existing) continue;
+    if (!existing) {
+      await db.insert(stravaActivities).values({
+        userId,
+        stravaActivityId: activity.id,
+        title: activity.name,
+        startDate,
+        elapsedTime: activity.elapsed_time,
+        startLat,
+        startLng,
+      });
+      synced++;
+    }
 
-    const startLat = activity.start_latlng?.[0]?.toString() ?? null;
-    const startLng = activity.start_latlng?.[1]?.toString() ?? null;
-    const startDate = new Date(activity.start_date);
-
-    // Store the activity
-    await db.insert(stravaActivities).values({
-      userId,
-      stravaActivityId: activity.id,
-      title: activity.name,
-      startDate,
-      elapsedTime: activity.elapsed_time,
-      startLat,
-      startLng,
-    });
-
-    // Run matching
+    // Always re-run matching (other members' activities may have arrived since last sync)
     await matchActivityToGroups(userId, {
       stravaActivityId: activity.id,
       startDate,
       startLat,
       startLng,
     });
-
-    synced++;
   }
 
   return { synced };
