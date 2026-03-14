@@ -46,8 +46,31 @@ export default function SupportPage() {
                 <h3 className="font-medium text-gray-900">How are rides detected automatically?</h3>
                 <p className="mt-1">
                   When you upload a ride to Strava, PelotonTab checks if any of
-                  your group members rode at the same time and place. If so, a
-                  shared ride is created automatically.
+                  your group members rode at the same time and place (within 30
+                  minutes and 1km). If so, a shared ride is created
+                  automatically. These rides appear with a &quot;Strava&quot;
+                  badge in your group&apos;s activity feed.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900">My ride isn&apos;t showing up — what can I do?</h3>
+                <p className="mt-1">
+                  Strava webhook notifications can be delayed by several minutes
+                  or longer. Tap &quot;Sync Strava&quot; on the group page to
+                  manually pull your recent rides. This fetches your last 7 days
+                  of activities and re-runs the matching algorithm.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900">Why did my ride sync but no group ride was created?</h3>
+                <p className="mt-1">
+                  Auto-detected rides require at least two group members to have
+                  matching activities. If your riding partner hasn&apos;t synced
+                  yet, ask them to tap &quot;Sync Strava&quot; on the group page
+                  too. Once both activities are synced, the match will be found.
+                  You can also always log a ride manually.
                 </p>
               </div>
 
