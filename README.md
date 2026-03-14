@@ -76,4 +76,4 @@ All amounts are stored in pence and displayed in GBP (£).
 
 ## License
 
-Private project.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
