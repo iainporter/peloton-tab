@@ -83,6 +83,32 @@ export async function updateRideParticipants(
   redirect(`/groups/${groupId}/rides/${rideId}`);
 }
 
+export async function addRiderToRide(
+  groupId: string,
+  rideId: string,
+  userId: string,
+) {
+  await requireGroupMember(groupId);
+
+  // Verify the user being added is a group member
+  const [targetMembership] = await db
+    .select()
+    .from(groupMembers)
+    .where(
+      and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (!targetMembership) throw new Error("User is not a member of this group");
+
+  await db.insert(rideRiders).values({ rideId, userId }).onConflictDoNothing();
+
+  revalidatePath(`/groups/${groupId}/rides/${rideId}`);
+}
+
 export async function addPayment(
   groupId: string,
   rideId: string,

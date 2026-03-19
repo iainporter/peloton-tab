@@ -10,6 +10,7 @@ import { DeleteRideButton } from "./components/delete-ride-button";
 import { DeletePaymentButton } from "./components/delete-payment-button";
 import { EditPaymentButton } from "./components/edit-payment-button";
 import { PendingPayments } from "@/components/pending-payments";
+import { AddRiderButton } from "./components/add-rider-button";
 
 export default async function RideDetailPage({
   params,
@@ -52,6 +53,19 @@ export default async function RideDetailPage({
     .from(rideRiders)
     .innerJoin(users, eq(users.id, rideRiders.userId))
     .where(eq(rideRiders.rideId, rideId));
+
+  const allMembers = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(groupMembers)
+    .innerJoin(users, eq(users.id, groupMembers.userId))
+    .where(eq(groupMembers.groupId, groupId));
+
+  const riderIds = new Set(riders.map((r) => r.id));
+  const nonRiders = allMembers.filter((m) => !riderIds.has(m.id));
 
   const ridePayments = await db
     .select({
@@ -128,12 +142,19 @@ export default async function RideDetailPage({
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
             Riders ({riders.length})
           </h2>
-          <Link
-            href={`/groups/${groupId}/rides/${rideId}/edit`}
-            className="text-sm text-orange-500 hover:text-orange-600 font-medium"
-          >
-            Edit
-          </Link>
+          <div className="flex items-center gap-3">
+            <AddRiderButton
+              groupId={groupId}
+              rideId={rideId}
+              availableMembers={nonRiders}
+            />
+            <Link
+              href={`/groups/${groupId}/rides/${rideId}/edit`}
+              className="text-sm text-orange-500 hover:text-orange-600 font-medium"
+            >
+              Edit
+            </Link>
+          </div>
         </div>
         <Card className="p-0">
           <div className="flex flex-wrap gap-3 p-4">

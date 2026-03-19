@@ -64,6 +64,17 @@ export default function SupportPage() {
               </div>
 
               <div>
+                <h3 className="font-medium text-gray-900">A rider is missing from a ride — can I add them?</h3>
+                <p className="mt-1">
+                  Yes. Open the ride from the group&apos;s activity feed and tap
+                  &quot;Add rider&quot; next to the riders list. You&apos;ll see
+                  all group members who aren&apos;t already on the ride — tap a
+                  name to add them. This is useful when Strava sync missed
+                  someone or they didn&apos;t upload their ride.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="font-medium text-gray-900">Why did my ride sync but no group ride was created?</h3>
                 <p className="mt-1">
                   Auto-detected rides require at least two group members to have
