@@ -8,15 +8,23 @@ import {
   groupMembers,
   users,
 } from "@/db/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, inArray, sql } from "drizzle-orm";
 import { Card, EmptyState } from "@/components/ui";
 import Link from "next/link";
+
+const PAGE_SIZE = 20;
 
 function formatAmount(pence: number) {
   return `£${(Math.abs(pence) / 100).toFixed(2)}`;
 }
 
-export default async function RidesPage() {
+export default async function RidesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const session = await auth();
   if (!session?.user?.id) return null;
 
@@ -42,20 +50,31 @@ export default async function RidesPage() {
   const groupIds = userGroups.map((g) => g.groupId);
   const groupNameMap = new Map(userGroups.map((g) => [g.groupId, g.groupName]));
 
-  // Get all rides from user's groups, ordered by date
-  const allRides = await db
-    .select({
-      id: rides.id,
-      groupId: rides.groupId,
-      date: rides.date,
-      title: rides.title,
-      autoDetected: rides.autoDetected,
-    })
-    .from(rides)
-    .where(inArray(rides.groupId, groupIds))
-    .orderBy(desc(rides.date));
+  // Get total count and paginated rides
+  const [countResult, pageRides] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(rides)
+      .where(inArray(rides.groupId, groupIds)),
+    db
+      .select({
+        id: rides.id,
+        groupId: rides.groupId,
+        date: rides.date,
+        title: rides.title,
+        autoDetected: rides.autoDetected,
+      })
+      .from(rides)
+      .where(inArray(rides.groupId, groupIds))
+      .orderBy(desc(rides.date))
+      .limit(PAGE_SIZE)
+      .offset((page - 1) * PAGE_SIZE),
+  ]);
 
-  if (allRides.length === 0) {
+  const totalCount = Number(countResult[0]?.count ?? 0);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  if (totalCount === 0) {
     return (
       <EmptyState
         title="No rides yet"
@@ -66,7 +85,7 @@ export default async function RidesPage() {
 
   // Get rider and payment details for each ride
   const rideDetails = await Promise.all(
-    allRides.map(async (ride) => {
+    pageRides.map(async (ride) => {
       const [riderRows, paymentRows] = await Promise.all([
         db
           .select({ userId: rideRiders.userId, name: users.name })
@@ -163,6 +182,35 @@ export default async function RidesPage() {
           );
         })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          {page > 1 ? (
+            <Link
+              href={`/rides?page=${page - 1}`}
+              className="text-sm font-medium text-orange-500 hover:text-orange-600"
+            >
+              Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-sm text-gray-500">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages ? (
+            <Link
+              href={`/rides?page=${page + 1}`}
+              className="text-sm font-medium text-orange-500 hover:text-orange-600"
+            >
+              Next
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
+      )}
     </div>
   );
 }
