@@ -86,6 +86,16 @@ export default function SupportPage() {
               </div>
 
               <div>
+                <h3 className="font-medium text-gray-900">What does the Rides page show?</h3>
+                <p className="mt-1">
+                  The Rides tab shows all rides across every group you belong to,
+                  sorted by most recent first. Each card shows the ride title or
+                  date, which group it belongs to, who rode, and any payments
+                  logged. Tap a ride to see its full details.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="font-medium text-gray-900">How are expenses split?</h3>
                 <p className="mt-1">
                   When someone logs a payment against a ride, the cost is split
