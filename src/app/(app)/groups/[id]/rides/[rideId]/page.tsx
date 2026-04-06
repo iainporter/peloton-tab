@@ -11,6 +11,7 @@ import { DeletePaymentButton } from "./components/delete-payment-button";
 import { EditPaymentButton } from "./components/edit-payment-button";
 import { PendingPayments } from "@/components/pending-payments";
 import { AddRiderButton } from "./components/add-rider-button";
+import { RemoveRiderButton } from "./components/remove-rider-button";
 
 export default async function RideDetailPage({
   params,
@@ -83,6 +84,7 @@ export default async function RideDetailPage({
 
   const totalPence = ridePayments.reduce((sum, p) => sum + p.amount, 0);
   const perPerson = riders.length > 0 ? totalPence / riders.length : 0;
+  const ridersWithPayments = new Set(ridePayments.map((p) => p.paidBy));
 
   const formatAmount = (pence: number) => `£${(pence / 100).toFixed(2)}`;
 
@@ -156,29 +158,36 @@ export default async function RideDetailPage({
             </Link>
           </div>
         </div>
-        <Card className="p-0">
-          <div className="flex flex-wrap gap-3 p-4">
-            {riders.map((rider) => (
-              <div key={rider.id} className="flex items-center gap-2">
-                {rider.avatarUrl ? (
-                  <Image
-                    src={rider.avatarUrl}
-                    alt={rider.name}
-                    width={28}
-                    height={28}
-                    className="rounded-full"
-                  />
-                ) : (
-                  <div className="h-7 w-7 rounded-full bg-orange-100 flex items-center justify-center">
-                    <span className="text-xs font-medium text-orange-600">
-                      {rider.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <span className="text-sm text-gray-700">{rider.name}</span>
-              </div>
-            ))}
-          </div>
+        <Card className="divide-y divide-gray-100 p-0">
+          {riders.map((rider) => (
+            <div key={rider.id} className="flex items-center gap-2 px-4 py-2.5">
+              {rider.avatarUrl ? (
+                <Image
+                  src={rider.avatarUrl}
+                  alt={rider.name}
+                  width={28}
+                  height={28}
+                  className="rounded-full"
+                />
+              ) : (
+                <div className="h-7 w-7 rounded-full bg-orange-100 flex items-center justify-center">
+                  <span className="text-xs font-medium text-orange-600">
+                    {rider.name.charAt(0)}
+                  </span>
+                </div>
+              )}
+              <span className="text-sm text-gray-700">{rider.name}</span>
+              {riders.length > 1 && (
+                <RemoveRiderButton
+                  groupId={groupId}
+                  rideId={rideId}
+                  userId={rider.id}
+                  riderName={rider.name.split(" ")[0]}
+                  hasPayments={ridersWithPayments.has(rider.id)}
+                />
+              )}
+            </div>
+          ))}
         </Card>
       </div>
 

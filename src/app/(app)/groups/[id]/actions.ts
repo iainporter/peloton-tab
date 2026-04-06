@@ -109,6 +109,31 @@ export async function addRiderToRide(
   revalidatePath(`/groups/${groupId}/rides/${rideId}`);
 }
 
+export async function removeRiderFromRide(
+  groupId: string,
+  rideId: string,
+  userId: string,
+) {
+  await requireGroupMember(groupId);
+
+  // Prevent removing a rider who has payments on this ride
+  const [hasPayment] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(and(eq(payments.rideId, rideId), eq(payments.paidBy, userId)))
+    .limit(1);
+
+  if (hasPayment) {
+    throw new Error("Cannot remove a rider who has payments on this ride. Delete their payments first.");
+  }
+
+  await db
+    .delete(rideRiders)
+    .where(and(eq(rideRiders.rideId, rideId), eq(rideRiders.userId, userId)));
+
+  revalidatePath(`/groups/${groupId}/rides/${rideId}`);
+}
+
 export async function addPayment(
   groupId: string,
   rideId: string,
