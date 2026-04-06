@@ -120,7 +120,19 @@ async function refreshStravaToken(token: any) {
       expiresAt: data.expires_at,
     };
   } catch (error) {
-    console.error("Error refreshing Strava token:", error);
+    console.error("Error refreshing Strava token for stravaId:", token.stravaId, error);
+    // Clear stored tokens so stale refresh tokens don't keep retrying
+    if (token.stravaId) {
+      await db
+        .update(users)
+        .set({
+          stravaAccessToken: "",
+          stravaRefreshToken: "",
+          stravaTokenExpiresAt: new Date(0),
+        })
+        .where(eq(users.stravaId, token.stravaId as number))
+        .catch(() => {}); // best-effort cleanup
+    }
     return { ...token, error: "RefreshTokenError" };
   }
 }

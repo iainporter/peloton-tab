@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { stravaActivities } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { stravaActivities, groupMembers } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { getFreshAccessToken, fetchRecentActivities } from "./strava";
 import { matchActivityToGroups } from "./activity-matching";
 
@@ -58,4 +58,31 @@ export async function backfillRecentActivities(userId: string): Promise<{ synced
   }
 
   return { synced };
+}
+
+/**
+ * Backfill all members of a group — fetches each member's recent activities
+ * and runs matching. This ensures matching works even if webhooks were missed.
+ */
+export async function backfillGroupActivities(groupId: string): Promise<{ synced: number; membersFailed: number }> {
+  const members = await db
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
+
+  let totalSynced = 0;
+  let membersFailed = 0;
+
+  for (const member of members) {
+    try {
+      const result = await backfillRecentActivities(member.userId);
+      totalSynced += result.synced;
+    } catch (error) {
+      // Token may be expired for some members — continue with others
+      console.warn(`Backfill failed for user ${member.userId} in group ${groupId}:`, error);
+      membersFailed++;
+    }
+  }
+
+  return { synced: totalSynced, membersFailed };
 }

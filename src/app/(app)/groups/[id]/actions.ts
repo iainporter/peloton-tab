@@ -11,7 +11,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { backfillRecentActivities } from "@/lib/backfill";
+import { backfillGroupActivities } from "@/lib/backfill";
 
 async function requireGroupMember(groupId: string) {
   const session = await auth();
@@ -172,12 +172,17 @@ export async function deletePayment(
 }
 
 export async function syncStravaRides(groupId: string): Promise<{ success: boolean; message: string }> {
-  const userId = await requireGroupMember(groupId);
+  await requireGroupMember(groupId);
 
   try {
-    const result = await backfillRecentActivities(userId);
+    const result = await backfillGroupActivities(groupId);
     revalidatePath(`/groups/${groupId}`);
-    return { success: true, message: `Synced ${result.synced} new ride${result.synced === 1 ? "" : "s"} from Strava` };
+    const parts: string[] = [];
+    parts.push(`Synced ${result.synced} new ride${result.synced === 1 ? "" : "s"} from Strava`);
+    if (result.membersFailed > 0) {
+      parts.push(`(${result.membersFailed} member${result.membersFailed === 1 ? "" : "s"} need to re-authenticate)`);
+    }
+    return { success: true, message: parts.join(" ") };
   } catch (error) {
     console.error("Strava sync failed:", error);
     return { success: false, message: "Failed to sync from Strava. Please try again." };

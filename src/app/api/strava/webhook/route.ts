@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
 
   const { object_type, aspect_type, object_id, owner_id } = body;
 
+  console.log(`Strava webhook: ${object_type}/${aspect_type} id=${object_id} owner=${owner_id}`);
+
   // We only care about activity create events
   if (object_type !== "activity" || aspect_type !== "create") {
     return NextResponse.json({ ok: true });
@@ -47,25 +49,27 @@ export async function POST(request: NextRequest) {
     .limit(1);
 
   if (!user) {
-    // Unknown user — ignore
+    console.warn(`Strava webhook: unknown athlete ${owner_id}, ignoring`);
     return NextResponse.json({ ok: true });
   }
 
   // Get a fresh access token
   const accessToken = await getFreshAccessToken(user.id);
   if (!accessToken) {
-    console.error("Could not get access token for user", user.id);
+    console.error(`Strava webhook: could not get access token for user ${user.id} (athlete ${owner_id}). Activity ${object_id} dropped.`);
     return NextResponse.json({ ok: true });
   }
 
   // Fetch the full activity from Strava
   const activity = await fetchStravaActivity(accessToken, object_id);
   if (!activity) {
+    console.error(`Strava webhook: failed to fetch activity ${object_id} for user ${user.id}`);
     return NextResponse.json({ ok: true });
   }
 
   // Only process ride-type activities
   if (activity.type !== "Ride") {
+    console.log(`Strava webhook: skipping non-ride activity ${object_id} (type: ${activity.type})`);
     return NextResponse.json({ ok: true });
   }
 
@@ -94,6 +98,8 @@ export async function POST(request: NextRequest) {
     startLat,
     startLng,
   });
+
+  console.log(`Strava webhook: stored activity ${object_id} "${activity.name}" for user ${user.id}, running matching`);
 
   // Run the matching algorithm
   await matchActivityToGroups(user.id, {
