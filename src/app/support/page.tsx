@@ -75,6 +75,17 @@ export default function SupportPage() {
               </div>
 
               <div>
+                <h3 className="font-medium text-gray-900">Can I remove a rider from a ride?</h3>
+                <p className="mt-1">
+                  Yes. Open the ride from the group&apos;s activity feed and
+                  tap the X button next to the rider&apos;s name. Note that
+                  you must delete any payments logged by that rider before
+                  they can be removed. Once removed, group balances
+                  recalculate automatically.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="font-medium text-gray-900">Why did my ride sync but no group ride was created?</h3>
                 <p className="mt-1">
                   Auto-detected rides require at least two group members to have
