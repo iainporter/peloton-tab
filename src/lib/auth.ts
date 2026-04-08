@@ -62,10 +62,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.picture = avatarUrl;
       }
 
-      // Check if access token needs refreshing
-      if (token.expiresAt && Date.now() >= (token.expiresAt as number) * 1000) {
-        return await refreshStravaToken(token);
-      }
+      // Token refresh is NOT done here. Next.js 16 doesn't allow cookies to
+      // be modified in Server Components or Middleware, and Auth.js updates the
+      // session cookie whenever the JWT changes. All Strava API calls use
+      // getFreshAccessToken() (src/lib/strava.ts) which refreshes from the DB.
 
       return token;
     },
@@ -75,9 +75,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.stravaId = token.stravaId as number;
       session.user.name = token.name as string;
       session.user.image = token.picture as string;
-      if (token.error) {
-        session.error = token.error as string;
-      }
       return session;
     },
   },
@@ -86,53 +83,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
-async function refreshStravaToken(token: any) {
-  try {
-    const response = await fetch("https://www.strava.com/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: process.env.STRAVA_CLIENT_ID!,
-        client_secret: process.env.STRAVA_CLIENT_SECRET!,
-        grant_type: "refresh_token",
-        refresh_token: token.refreshToken,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) throw data;
-
-    // Update tokens in database
-    await db
-      .update(users)
-      .set({
-        stravaAccessToken: data.access_token,
-        stravaRefreshToken: data.refresh_token ?? token.refreshToken,
-        stravaTokenExpiresAt: new Date(data.expires_at * 1000),
-      })
-      .where(eq(users.stravaId, token.stravaId as number));
-
-    return {
-      ...token,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token ?? token.refreshToken,
-      expiresAt: data.expires_at,
-    };
-  } catch (error) {
-    console.error("Error refreshing Strava token for stravaId:", token.stravaId, error);
-    // Clear stored tokens so stale refresh tokens don't keep retrying
-    if (token.stravaId) {
-      await db
-        .update(users)
-        .set({
-          stravaAccessToken: "",
-          stravaRefreshToken: "",
-          stravaTokenExpiresAt: new Date(0),
-        })
-        .where(eq(users.stravaId, token.stravaId as number))
-        .catch(() => {}); // best-effort cleanup
-    }
-    return { ...token, error: "RefreshTokenError" };
-  }
-}
