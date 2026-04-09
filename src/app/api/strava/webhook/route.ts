@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
 
   console.log(`Strava webhook: ${object_type}/${aspect_type} id=${object_id} owner=${owner_id}`);
 
-  // We only care about activity create events
-  if (object_type !== "activity" || aspect_type !== "create") {
+  // We care about activity create and update events
+  // Strava sometimes sends only "update" for new activities (e.g., device auto-upload)
+  if (object_type !== "activity" || (aspect_type !== "create" && aspect_type !== "update")) {
     return NextResponse.json({ ok: true });
   }
 
@@ -73,6 +74,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  const startLat = activity.start_latlng?.[0]?.toString() ?? null;
+  const startLng = activity.start_latlng?.[1]?.toString() ?? null;
+  const startDate = new Date(activity.start_date);
+
   // Check if we already have this activity
   const [existing] = await db
     .select({ id: stravaActivities.id })
@@ -80,28 +85,24 @@ export async function POST(request: NextRequest) {
     .where(eq(stravaActivities.stravaActivityId, object_id))
     .limit(1);
 
-  if (existing) {
-    return NextResponse.json({ ok: true });
+  if (!existing) {
+    // Store the activity
+    await db.insert(stravaActivities).values({
+      userId: user.id,
+      stravaActivityId: activity.id,
+      title: activity.name,
+      startDate,
+      elapsedTime: activity.elapsed_time,
+      startLat,
+      startLng,
+    });
+
+    console.log(`Strava webhook: stored activity ${object_id} "${activity.name}" for user ${user.id}, running matching`);
+  } else {
+    console.log(`Strava webhook: activity ${object_id} already stored for user ${user.id}, re-running matching`);
   }
 
-  const startLat = activity.start_latlng?.[0]?.toString() ?? null;
-  const startLng = activity.start_latlng?.[1]?.toString() ?? null;
-  const startDate = new Date(activity.start_date);
-
-  // Store the activity
-  await db.insert(stravaActivities).values({
-    userId: user.id,
-    stravaActivityId: activity.id,
-    title: activity.name,
-    startDate,
-    elapsedTime: activity.elapsed_time,
-    startLat,
-    startLng,
-  });
-
-  console.log(`Strava webhook: stored activity ${object_id} "${activity.name}" for user ${user.id}, running matching`);
-
-  // Run the matching algorithm
+  // Run the matching algorithm (always, so late-arriving activities can be matched)
   await matchActivityToGroups(user.id, {
     stravaActivityId: activity.id,
     startDate,
