@@ -2,8 +2,13 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+// In-flight refresh promises keyed by userId to prevent concurrent token rotations
+const inflightRefreshes = new Map<string, Promise<string | null>>();
+
 /**
  * Get a fresh Strava access token for a user, refreshing if expired.
+ * Uses deduplication to prevent concurrent refreshes from invalidating
+ * Strava's rotated refresh tokens.
  */
 export async function getFreshAccessToken(userId: string): Promise<string | null> {
   const [user] = await db
@@ -23,7 +28,19 @@ export async function getFreshAccessToken(userId: string): Promise<string | null
     return user.stravaAccessToken;
   }
 
-  // Refresh the token
+  // Deduplicate concurrent refreshes for the same user
+  const inflight = inflightRefreshes.get(userId);
+  if (inflight) return inflight;
+
+  const refreshPromise = doRefresh(userId, user.stravaRefreshToken).finally(() => {
+    inflightRefreshes.delete(userId);
+  });
+  inflightRefreshes.set(userId, refreshPromise);
+
+  return refreshPromise;
+}
+
+async function doRefresh(userId: string, refreshToken: string): Promise<string | null> {
   const response = await fetch("https://www.strava.com/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -31,7 +48,7 @@ export async function getFreshAccessToken(userId: string): Promise<string | null
       client_id: process.env.STRAVA_CLIENT_ID!,
       client_secret: process.env.STRAVA_CLIENT_SECRET!,
       grant_type: "refresh_token",
-      refresh_token: user.stravaRefreshToken,
+      refresh_token: refreshToken,
     }),
   });
 
@@ -45,7 +62,7 @@ export async function getFreshAccessToken(userId: string): Promise<string | null
     .update(users)
     .set({
       stravaAccessToken: data.access_token,
-      stravaRefreshToken: data.refresh_token ?? user.stravaRefreshToken,
+      stravaRefreshToken: data.refresh_token ?? refreshToken,
       stravaTokenExpiresAt: new Date(data.expires_at * 1000),
     })
     .where(eq(users.id, userId));
