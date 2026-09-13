@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { groups, groupMembers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getUnsettledTrips } from "@/lib/trip-data";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { backfillRecentActivities } from "@/lib/backfill";
@@ -124,6 +125,15 @@ export async function joinGroupByCode(code: string) {
 export async function leaveGroup(groupId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not authenticated");
+
+  // Members can't walk away from trip balances that haven't been settled
+  const [unsettledTrip] = await getUnsettledTrips(session.user.id, groupId);
+
+  if (unsettledTrip) {
+    return {
+      error: `You're on "${unsettledTrip.name}", which hasn't been settled. Settle the trip, or ask a trip member to remove you from it, before leaving the group.`,
+    };
+  }
 
   await db
     .delete(groupMembers)

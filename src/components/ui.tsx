@@ -1,4 +1,38 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import Image from "next/image";
+
+export function Avatar({
+  name,
+  src,
+  size = 32,
+}: {
+  name: string;
+  src: string | null;
+  size?: number;
+}) {
+  if (src) {
+    return (
+      <Image
+        src={src}
+        alt={name}
+        width={size}
+        height={size}
+        className="rounded-full shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="rounded-full bg-orange-100 flex items-center justify-center shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <span className="text-xs font-medium text-orange-600">
+        {name.charAt(0)}
+      </span>
+    </div>
+  );
+}
 
 export function Button({
   variant = "primary",

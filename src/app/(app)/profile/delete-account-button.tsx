@@ -6,18 +6,23 @@ import { signOut } from "next-auth/react";
 export function DeleteAccountButton() {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/account/delete", { method: "POST" });
       if (res.ok) {
         await signOut({ callbackUrl: "/" });
       } else {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Failed to delete account. Please try again.");
         setLoading(false);
         setConfirming(false);
       }
     } catch {
+      setError("Failed to delete account. Please try again.");
       setLoading(false);
       setConfirming(false);
     }
@@ -28,7 +33,9 @@ export function DeleteAccountButton() {
       <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
         <p className="text-sm text-red-800">
           This will permanently delete your account, all group memberships,
-          rides, and payment history. This cannot be undone.
+          rides, and payment history. Expenses and payments on settled trips
+          are kept for the other members, shown as &ldquo;Deleted user&rdquo;.
+          This cannot be undone.
         </p>
         <div className="flex gap-2">
           <button
@@ -51,11 +58,18 @@ export function DeleteAccountButton() {
   }
 
   return (
-    <button
-      onClick={() => setConfirming(true)}
-      className="w-full rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
-    >
-      Delete Account
-    </button>
+    <div className="space-y-2">
+      {error && (
+        <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      <button
+        onClick={() => setConfirming(true)}
+        className="w-full rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+      >
+        Delete Account
+      </button>
+    </div>
   );
 }
