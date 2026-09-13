@@ -161,3 +161,4 @@ Migrations managed via Drizzle Kit:
 - Strava brand orange (#FC4C02) for the sign-in button
 - Server components by default, `"use client"` only when needed
 - Server actions for form submissions (sign-in, sign-out)
+- Never let expected validation failures throw from a form action — in production Next shows a generic "Application error" page. Throw `ActionError` in the action, wrap it with `withFormErrors` so it returns `{ error }`, and render the form with `ActionForm` (`src/components/action-form.tsx`), which shows the message inline and keeps the user's input (see `trips/actions.ts`)

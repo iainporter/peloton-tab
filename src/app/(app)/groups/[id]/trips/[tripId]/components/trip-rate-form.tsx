@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
+import { ActionForm } from "@/components/action-form";
 import { CURRENCIES } from "@/lib/money";
 import { fetchExchangeRate, setTripRate } from "../../actions";
 
@@ -50,7 +51,7 @@ export function TripRateForm({
   }
 
   return (
-    <form action={setTripRateBound} className="space-y-2">
+    <ActionForm action={setTripRateBound} className="space-y-2">
       <div className="flex items-center gap-2 text-sm text-gray-700">
         <span>1</span>
         <select
@@ -96,6 +97,6 @@ export function TripRateForm({
           {existing.has(currency) ? "Update rate" : "Add rate"}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
