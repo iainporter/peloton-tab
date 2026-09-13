@@ -13,6 +13,8 @@ import {
   removeTripMember,
   updateTrip,
 } from "../../actions";
+import { ActionForm } from "@/components/action-form";
+import { TripDateFields } from "../../trip-date-fields";
 import { DeleteTripButton } from "../components/delete-trip-button";
 import { TripRateForm } from "../components/trip-rate-form";
 
@@ -79,29 +81,19 @@ export default async function TripSettingsPage({
       </div>
 
       {/* Details */}
-      <form action={updateTripBound} className="space-y-4">
+      <ActionForm action={updateTripBound} className="space-y-4">
         <Input label="Name" name="name" defaultValue={trip.name} required />
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Start date"
-            type="date"
-            name="startDate"
-            defaultValue={trip.startDate ?? undefined}
-          />
-          <Input
-            label="End date"
-            type="date"
-            name="endDate"
-            defaultValue={trip.endDate ?? undefined}
-          />
-        </div>
+        <TripDateFields
+          defaultStartDate={trip.startDate}
+          defaultEndDate={trip.endDate}
+        />
         <p className="text-xs text-gray-500">
           Base currency: {trip.baseCurrency} — {currencyName}
         </p>
         <Button type="submit" variant="secondary" className="w-full">
           Save Details
         </Button>
-      </form>
+      </ActionForm>
 
       {/* Exchange Rates */}
       <div>

@@ -30,9 +30,29 @@ import { getExchangeRate } from "@/lib/exchange-rates";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** An error whose message is safe to show to the user */
+class ActionError extends Error {}
+
+type FormResult = { error: string } | undefined;
+
+/**
+ * Run a form action, returning ActionError messages to the form (shown inline
+ * by ActionForm) rather than throwing them — thrown errors show Next's error
+ * page in production. Redirects and unexpected errors still throw.
+ */
+async function withFormErrors(run: () => Promise<void>): Promise<FormResult> {
+  try {
+    await run();
+  } catch (error) {
+    if (error instanceof ActionError) return { error: error.message };
+    throw error;
+  }
+  return undefined;
+}
+
 async function requireGroupMember(groupId: string) {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Not authenticated");
+  if (!session?.user?.id) throw new ActionError("Not authenticated");
 
   const [membership] = await db
     .select()
@@ -45,7 +65,7 @@ async function requireGroupMember(groupId: string) {
     )
     .limit(1);
 
-  if (!membership) throw new Error("Not a member of this group");
+  if (!membership) throw new ActionError("Not a member of this group");
   return session.user.id;
 }
 
@@ -69,7 +89,7 @@ async function requireTripMember(groupId: string, tripId: string) {
     .where(and(eq(trips.id, tripId), eq(trips.groupId, groupId)))
     .limit(1);
 
-  if (!trip) throw new Error("Trip not found");
+  if (!trip) throw new ActionError("Trip not found");
 
   const memberRows = await db
     .select({ userId: tripMembers.userId })
@@ -77,17 +97,17 @@ async function requireTripMember(groupId: string, tripId: string) {
     .where(eq(tripMembers.tripId, tripId));
   const memberIds = new Set(memberRows.map((r) => r.userId));
 
-  if (!memberIds.has(userId)) throw new Error("Not a member of this trip");
+  if (!memberIds.has(userId)) throw new ActionError("Not a member of this trip");
 
   return { userId, trip, memberIds };
 }
 
 function requireOpen(trip: { status: string }) {
   if (trip.status === "settling") {
-    throw new Error("This trip is being settled. Reopen it to make changes.");
+    throw new ActionError("This trip is being settled. Reopen it to make changes.");
   }
   if (trip.status === "settled") {
-    throw new Error("This trip has been settled. Reopen it to make changes.");
+    throw new ActionError("This trip has been settled. Reopen it to make changes.");
   }
 }
 
@@ -112,9 +132,9 @@ async function requireSettlementParty(
     )
     .limit(1);
 
-  if (!settlement) throw new Error("Payment not found");
+  if (!settlement) throw new ActionError("Payment not found");
   if (settlement.fromUserId !== userId && settlement.toUserId !== userId) {
-    throw new Error("Only the payer or recipient can update this payment");
+    throw new ActionError("Only the payer or recipient can update this payment");
   }
 
   return settlement;
@@ -130,18 +150,18 @@ async function getTripRateMap(tripId: string) {
 
 function parseOptionalDate(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || value === "") return null;
-  if (!ISO_DATE.test(value)) throw new Error("Invalid date");
+  if (!ISO_DATE.test(value)) throw new ActionError("Invalid date");
   return value;
 }
 
 function parseTripDetails(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
-  if (!name) throw new Error("Trip name is required");
+  if (!name) throw new ActionError("Trip name is required");
 
   const startDate = parseOptionalDate(formData.get("startDate"));
   const endDate = parseOptionalDate(formData.get("endDate"));
   if (startDate && endDate && endDate < startDate) {
-    throw new Error("End date must be on or after the start date");
+    throw new ActionError("End date must be on or after the start date");
   }
 
   return { name, startDate, endDate };
@@ -169,7 +189,7 @@ function parseConversion(
   switch (formData.get("conversion")) {
     case "trip": {
       const rate = tripRateMap.get(currency);
-      if (!rate) throw new Error(`No trip rate set for ${currency}`);
+      if (!rate) throw new ActionError(`No trip rate set for ${currency}`);
       result = {
         rate,
         rateSource: "trip",
@@ -179,7 +199,7 @@ function parseConversion(
     }
     case "rate": {
       const rate = parseRate((formData.get("rate") as string) ?? "");
-      if (!rate) throw new Error("Invalid exchange rate");
+      if (!rate) throw new ActionError("Invalid exchange rate");
       result = {
         rate,
         rateSource: formData.get("rateFetched") === "true" ? "live" : "manual",
@@ -192,18 +212,18 @@ function parseConversion(
         (formData.get("chargedAmount") as string) ?? "",
         baseCurrency,
       );
-      if (!baseAmount) throw new Error(`Invalid ${baseCurrency} amount`);
+      if (!baseAmount) throw new ActionError(`Invalid ${baseCurrency} amount`);
       const rate = deriveRate(amount, currency, baseAmount, baseCurrency);
-      if (!rate) throw new Error("Those amounts don't give a valid exchange rate");
+      if (!rate) throw new ActionError("Those amounts don't give a valid exchange rate");
       result = { rate, rateSource: "manual", baseAmount };
       break;
     }
     default:
-      throw new Error(`Choose how to convert ${currency} to ${baseCurrency}`);
+      throw new ActionError(`Choose how to convert ${currency} to ${baseCurrency}`);
   }
 
   if (result.baseAmount <= 0 || result.baseAmount > MAX_MINOR_UNITS) {
-    throw new Error(`The converted ${baseCurrency} amount is invalid`);
+    throw new ActionError(`The converted ${baseCurrency} amount is invalid`);
   }
 
   return result;
@@ -216,26 +236,26 @@ function parseExpense(
   tripRateMap: Map<string, string>,
 ) {
   const description = (formData.get("description") as string)?.trim();
-  if (!description) throw new Error("Description is required");
+  if (!description) throw new ActionError("Description is required");
 
   const date = formData.get("date") as string;
-  if (!date || !ISO_DATE.test(date)) throw new Error("Date is required");
+  if (!date || !ISO_DATE.test(date)) throw new ActionError("Date is required");
 
   const currency = formData.get("currency") as string;
-  if (!isCurrencyCode(currency)) throw new Error("Unsupported currency");
+  if (!isCurrencyCode(currency)) throw new ActionError("Unsupported currency");
 
   const amount = toMinor((formData.get("amount") as string) ?? "", currency);
-  if (!amount) throw new Error("Invalid amount");
+  if (!amount) throw new ActionError("Invalid amount");
 
   const paidBy = formData.get("paidBy") as string;
-  if (!memberIds.has(paidBy)) throw new Error("Payer must be a trip member");
+  if (!memberIds.has(paidBy)) throw new ActionError("Payer must be a trip member");
 
   const participants = [...new Set(formData.getAll("participants") as string[])];
   if (participants.length === 0) {
-    throw new Error("At least one participant is required");
+    throw new ActionError("At least one participant is required");
   }
   if (participants.some((id) => !memberIds.has(id))) {
-    throw new Error("Participants must be trip members");
+    throw new ActionError("Participants must be trip members");
   }
 
   return {
@@ -250,17 +270,21 @@ function parseExpense(
 }
 
 export async function createTrip(groupId: string, formData: FormData) {
+  return withFormErrors(() => createTripOrThrow(groupId, formData));
+}
+
+async function createTripOrThrow(groupId: string, formData: FormData) {
   const userId = await requireGroupMember(groupId);
   const details = parseTripDetails(formData);
 
   const baseCurrency = formData.get("baseCurrency") as string;
-  if (!isCurrencyCode(baseCurrency)) throw new Error("Unsupported currency");
+  if (!isCurrencyCode(baseCurrency)) throw new ActionError("Unsupported currency");
 
   // The creator is always on the trip
   const members = new Set([...(formData.getAll("members") as string[]), userId]);
   const groupMemberIds = await getGroupMemberIds(groupId);
   if ([...members].some((id) => !groupMemberIds.has(id))) {
-    throw new Error("Trip members must be group members");
+    throw new ActionError("Trip members must be group members");
   }
 
   const tripId = crypto.randomUUID();
@@ -283,6 +307,14 @@ export async function createTrip(groupId: string, formData: FormData) {
 }
 
 export async function updateTrip(
+  groupId: string,
+  tripId: string,
+  formData: FormData,
+) {
+  return withFormErrors(() => updateTripOrThrow(groupId, tripId, formData));
+}
+
+async function updateTripOrThrow(
   groupId: string,
   tripId: string,
   formData: FormData,
@@ -316,7 +348,7 @@ export async function addTripMember(
 
   const groupMemberIds = await getGroupMemberIds(groupId);
   if (!groupMemberIds.has(userId)) {
-    throw new Error("User is not a member of this group");
+    throw new ActionError("User is not a member of this group");
   }
 
   await db
@@ -337,7 +369,7 @@ export async function removeTripMember(
   requireOpen(trip);
 
   if (memberIds.size <= 1) {
-    throw new Error("A trip needs at least one member");
+    throw new ActionError("A trip needs at least one member");
   }
 
   // Prevent removing a member who paid for or shared in any expense
@@ -360,7 +392,7 @@ export async function removeTripMember(
     .limit(1);
 
   if (involvement) {
-    throw new Error(
+    throw new ActionError(
       "Cannot remove a member who is on an expense. Remove them from those expenses first.",
     );
   }
@@ -378,16 +410,24 @@ export async function setTripRate(
   tripId: string,
   formData: FormData,
 ) {
+  return withFormErrors(() => setTripRateOrThrow(groupId, tripId, formData));
+}
+
+async function setTripRateOrThrow(
+  groupId: string,
+  tripId: string,
+  formData: FormData,
+) {
   const { trip } = await requireTripMember(groupId, tripId);
   requireOpen(trip);
 
   const currency = formData.get("currency") as string;
   if (!isCurrencyCode(currency) || currency === trip.baseCurrency) {
-    throw new Error("Choose a currency other than the trip's base currency");
+    throw new ActionError("Choose a currency other than the trip's base currency");
   }
 
   const rate = parseRate((formData.get("rate") as string) ?? "");
-  if (!rate) throw new Error("Invalid exchange rate");
+  if (!rate) throw new ActionError("Invalid exchange rate");
 
   // Recalculate every expense that uses the trip rate for this currency
   const affected = await db
@@ -407,7 +447,7 @@ export async function setTripRate(
   }));
 
   if (recalculated.some((e) => e.baseAmount <= 0 || e.baseAmount > MAX_MINOR_UNITS)) {
-    throw new Error("This rate converts some expenses to an invalid amount");
+    throw new ActionError("This rate converts some expenses to an invalid amount");
   }
 
   const now = new Date();
@@ -454,7 +494,7 @@ export async function deleteTripRate(
     .limit(1);
 
   if (inUse) {
-    throw new Error(`Expenses use the ${currency} trip rate, so it can't be removed`);
+    throw new ActionError(`Expenses use the ${currency} trip rate, so it can't be removed`);
   }
 
   await db
@@ -493,6 +533,14 @@ export async function addExpense(
   tripId: string,
   formData: FormData,
 ) {
+  return withFormErrors(() => addExpenseOrThrow(groupId, tripId, formData));
+}
+
+async function addExpenseOrThrow(
+  groupId: string,
+  tripId: string,
+  formData: FormData,
+) {
   const { userId, trip, memberIds } = await requireTripMember(groupId, tripId);
   requireOpen(trip);
 
@@ -527,6 +575,17 @@ export async function editExpense(
   expenseId: string,
   formData: FormData,
 ) {
+  return withFormErrors(() =>
+    editExpenseOrThrow(groupId, tripId, expenseId, formData),
+  );
+}
+
+async function editExpenseOrThrow(
+  groupId: string,
+  tripId: string,
+  expenseId: string,
+  formData: FormData,
+) {
   const { trip, memberIds } = await requireTripMember(groupId, tripId);
   requireOpen(trip);
 
@@ -536,7 +595,7 @@ export async function editExpense(
     .where(and(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)))
     .limit(1);
 
-  if (!existing) throw new Error("Expense not found");
+  if (!existing) throw new ActionError("Expense not found");
 
   const { participants, ...expense } = parseExpense(
     formData,
@@ -626,7 +685,7 @@ export async function markSettlementPaid(
   settlementId: string,
 ) {
   const { userId, trip } = await requireTripMember(groupId, tripId);
-  if (trip.status !== "settling") throw new Error("This trip isn't being settled");
+  if (trip.status !== "settling") throw new ActionError("This trip isn't being settled");
 
   const settlement = await requireSettlementParty(tripId, settlementId, userId);
   if (settlement.status === "paid") return;
@@ -673,7 +732,7 @@ export async function undoSettlementPayment(
 ) {
   const { userId, trip } = await requireTripMember(groupId, tripId);
   if (trip.status === "settled") {
-    throw new Error("This trip has been settled. Reopen it to undo a payment.");
+    throw new ActionError("This trip has been settled. Reopen it to undo a payment.");
   }
 
   const settlement = await requireSettlementParty(tripId, settlementId, userId);

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui";
+import { ActionForm } from "@/components/action-form";
 import { getTripForGroupMember, getTripLedger } from "@/lib/trip-data";
 import { addExpense } from "../../../actions";
 import { ExpenseFields } from "../../components/expense-fields";
@@ -45,7 +46,7 @@ export default async function NewExpensePage({
         </div>
       </div>
 
-      <form action={addExpenseBound} className="space-y-4">
+      <ActionForm action={addExpenseBound} className="space-y-4">
         <ExpenseFields
           groupId={groupId}
           baseCurrency={trip.baseCurrency}
@@ -56,7 +57,7 @@ export default async function NewExpensePage({
         <Button type="submit" className="w-full">
           Add Expense
         </Button>
-      </form>
+      </ActionForm>
     </div>
   );
 }

@@ -5,7 +5,9 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Avatar, Button, Input, Card } from "@/components/ui";
 import { CURRENCIES } from "@/lib/money";
+import { ActionForm } from "@/components/action-form";
 import { createTrip } from "../actions";
+import { TripDateFields } from "../trip-date-fields";
 import Link from "next/link";
 
 export default async function NewTripPage({
@@ -53,13 +55,10 @@ export default async function NewTripPage({
         <h1 className="text-xl font-bold text-gray-900">New Trip</h1>
       </div>
 
-      <form action={createTripWithGroupId} className="space-y-4">
+      <ActionForm action={createTripWithGroupId} className="space-y-4">
         <Input label="Name" name="name" placeholder="e.g. French Alps 2027" required />
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Start date (optional)" type="date" name="startDate" />
-          <Input label="End date (optional)" type="date" name="endDate" />
-        </div>
+        <TripDateFields optional />
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -119,7 +118,7 @@ export default async function NewTripPage({
         <Button type="submit" className="w-full">
           Create Trip
         </Button>
-      </form>
+      </ActionForm>
     </div>
   );
 }
