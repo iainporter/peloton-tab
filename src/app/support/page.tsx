@@ -128,7 +128,10 @@ export default function SupportPage() {
                 <p className="mt-1">
                   Go to your Profile page and tap &quot;Delete Account&quot;.
                   This permanently removes all your data including group
-                  memberships, rides, and payment history.
+                  memberships, rides, and payment history. You can&apos;t delete
+                  your account while you&apos;re on a trip that hasn&apos;t been
+                  settled. Expenses and payments on settled trips are kept for
+                  the other members, shown as &quot;Deleted user&quot;.
                 </p>
               </div>
 

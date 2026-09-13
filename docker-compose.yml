@@ -1,0 +1,39 @@
+# Local development database: Postgres behind a Neon-compatible HTTP proxy,
+# so the app's @neondatabase/serverless HTTP driver works unchanged.
+#
+#   docker compose up -d
+#   DATABASE_URL=postgres://postgres:postgres@localhost:5433/main npm run db:migrate
+#
+# The app connects via postgres://postgres:postgres@db.localtest.me:5432/main
+# (see .env.development.local and src/db/index.ts). Its queries go over HTTP to
+# the proxy on port 4444, so the port in that URL isn't used. Postgres is
+# exposed on host port 5433 for direct access (migrations, psql).
+services:
+  postgres:
+    image: postgres:17
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=main
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  neon-proxy:
+    image: ghcr.io/timowilhelm/local-neon-http-proxy:main
+    environment:
+      - PG_CONNECTION_STRING=postgres://postgres:postgres@postgres:5432/main
+    ports:
+      - "4444:4444"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  db_data:

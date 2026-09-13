@@ -10,6 +10,10 @@ import { CopyInviteCode } from "./copy-invite";
 import { SyncStravaButton } from "./sync-button";
 import Link from "next/link";
 import { getGroupBalances } from "@/lib/balances";
+import { getGroupTripSummaries } from "@/lib/trip-data";
+import { formatBalance, formatMoney } from "@/lib/money";
+import { formatTripDates } from "@/lib/trips";
+import { TripStatusBadge } from "@/components/trip-status-badge";
 
 function formatAmount(pence: number) {
   return `£${(Math.abs(pence) / 100).toFixed(2)}`;
@@ -54,8 +58,9 @@ export default async function GroupDetailPage({
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, id));
 
-  const [balances, allRides] = await Promise.all([
+  const [balances, tripSummaries, allRides] = await Promise.all([
     getGroupBalances(id),
+    getGroupTripSummaries(id, session.user.id),
     db
       .select({
         id: rides.id,
@@ -188,6 +193,77 @@ export default async function GroupDetailPage({
               );
             })}
           </Card>
+        )}
+      </div>
+
+      {/* Trips */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            Trips
+          </h2>
+          <Link
+            href={`/groups/${id}/trips/new`}
+            className="text-sm text-orange-500 hover:text-orange-600 font-medium"
+          >
+            New trip
+          </Link>
+        </div>
+        {tripSummaries.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">
+            No trips yet — plan a getaway and split the costs
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {tripSummaries.map((trip) => {
+              const dates = formatTripDates(trip.startDate, trip.endDate);
+              return (
+                <Link
+                  key={trip.id}
+                  href={`/groups/${id}/trips/${trip.id}`}
+                  className="block"
+                >
+                  <Card className="hover:border-orange-200 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-gray-900">
+                            {trip.name}
+                          </p>
+                          <TripStatusBadge status={trip.status} />
+                        </div>
+                        {dates && (
+                          <p className="text-xs text-gray-500">{dates}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          {trip.memberCount}{" "}
+                          {trip.memberCount === 1 ? "member" : "members"}
+                        </p>
+                      </div>
+                      <div className="text-right ml-3 shrink-0">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatMoney(trip.totalMinor, trip.baseCurrency)}
+                        </p>
+                        {trip.isMember && (
+                          <p
+                            className={`text-xs font-medium ${
+                              trip.userBalance > 0
+                                ? "text-green-600"
+                                : trip.userBalance < 0
+                                  ? "text-red-600"
+                                  : "text-gray-400"
+                            }`}
+                          >
+                            {formatBalance(trip.userBalance, trip.baseCurrency)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
 

@@ -1,8 +1,30 @@
-import NextAuth from "next-auth";
+import NextAuth, { type Session } from "next-auth";
+import { cache } from "react";
 import Strava from "./strava-provider";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+
+/**
+ * Whether the user behind a session still has an active account. Cached per
+ * request, since layouts and pages both call auth().
+ */
+const isActiveUser = cache(async (userId: string | undefined) => {
+  if (!userId) return false;
+
+  try {
+    const [user] = await db
+      .select({ deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return !!user && !user.deletedAt;
+  } catch (error) {
+    // Fail open: a database hiccup shouldn't sign everyone out
+    console.error("Session user check failed:", error);
+    return true;
+  }
+});
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
@@ -71,6 +93,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
+      // Sessions are JWTs, so another device stays signed in after the account
+      // is deleted. Reject sessions for missing or deleted users. Returning null
+      // doesn't work server-side (next-auth falls back to a default session),
+      // so clear the user — every auth() caller checks session?.user.
+      if (!(await isActiveUser(token.userId))) {
+        return { ...session, user: undefined } as unknown as Session;
+      }
+
       session.user.id = token.userId as string;
       session.user.stravaId = token.stravaId as number;
       session.user.name = token.name as string;

@@ -2,21 +2,25 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
-import { leaveGroup } from "../actions";
+import { reopenTrip } from "../../actions";
 
-export function LeaveGroupButton({ groupId }: { groupId: string }) {
+export function ReopenTripButton({
+  groupId,
+  tripId,
+}: {
+  groupId: string;
+  tripId: string;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleLeave() {
+  function handleReopen() {
     setError(null);
     startTransition(async () => {
-      const result = await leaveGroup(groupId);
-      if (result?.error) {
-        setError(result.error);
-        setConfirming(false);
-      }
+      const result = await reopenTrip(groupId, tripId);
+      if (result?.error) setError(result.error);
+      setConfirming(false);
     });
   }
 
@@ -29,11 +33,11 @@ export function LeaveGroupButton({ groupId }: { groupId: string }) {
           </div>
         )}
         <Button
-          variant="danger"
+          variant="secondary"
           className="w-full"
           onClick={() => setConfirming(true)}
         >
-          Leave Group
+          Reopen Trip
         </Button>
       </div>
     );
@@ -42,7 +46,8 @@ export function LeaveGroupButton({ groupId }: { groupId: string }) {
   return (
     <div className="space-y-2">
       <p className="text-sm text-center text-gray-600">
-        Are you sure you want to leave this group?
+        Reopen the trip for changes? Payments not yet made will be cleared;
+        payments already made are kept.
       </p>
       <div className="flex gap-2">
         <Button
@@ -52,13 +57,8 @@ export function LeaveGroupButton({ groupId }: { groupId: string }) {
         >
           Cancel
         </Button>
-        <Button
-          variant="danger"
-          className="flex-1"
-          onClick={handleLeave}
-          disabled={isPending}
-        >
-          {isPending ? "Leaving..." : "Leave"}
+        <Button className="flex-1" onClick={handleReopen} disabled={isPending}>
+          {isPending ? "Reopening..." : "Reopen"}
         </Button>
       </div>
     </div>

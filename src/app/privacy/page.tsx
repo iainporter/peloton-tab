@@ -71,7 +71,9 @@ export default function PrivacyPolicy() {
               </li>
               <li>
                 <strong>Delete:</strong> Delete your account and all associated
-                data from your profile page. Deletions are processed immediately
+                personal data from your profile page. Deletions are processed
+                immediately. Group trip records are kept in anonymised form (see
+                Data Retention)
               </li>
               <li>
                 <strong>Withdraw consent:</strong> You can revoke access at any
@@ -87,6 +89,14 @@ export default function PrivacyPolicy() {
               delete your account, all your personal data, group memberships,
               ride records, and payment history are permanently deleted. Strava
               activity data cached for ride detection is also removed.
+            </p>
+            <p className="mt-2">
+              If you were part of a group trip, the trip{"'"}s expenses and
+              settlement payments are kept so the other members{"'"} balances
+              stay correct. If you created a group, the group is kept for its
+              members. In both cases these records are anonymised: your name,
+              photo and Strava connection are removed, and you appear as
+              &quot;Deleted user&quot;.
             </p>
           </section>
 

@@ -15,6 +15,34 @@
       "when": 1773415040424,
       "tag": "0001_outgoing_gwen_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789313858699,
+      "tag": "0002_fuzzy_talos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789314727737,
+      "tag": "0003_steep_marauders",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789315118308,
+      "tag": "0004_fixed_puff_adder",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789315595105,
+      "tag": "0005_solid_proudstar",
+      "breakpoints": true
     }
   ]
 }
