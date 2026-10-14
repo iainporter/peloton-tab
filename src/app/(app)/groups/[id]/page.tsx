@@ -13,6 +13,7 @@ import { getGroupBalances } from "@/lib/balances";
 import { getGroupTripSummaries } from "@/lib/trip-data";
 import { formatBalance, formatMoney } from "@/lib/money";
 import { formatTripDates } from "@/lib/trips";
+import { shortNames } from "@/lib/names";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 
 function formatAmount(pence: number) {
@@ -107,6 +108,14 @@ export default async function GroupDetailPage({
       };
     }),
   );
+
+  // Riders who've since left the group still appear on their rides
+  const riderNames = shortNames([
+    ...members,
+    ...rideDetails.flatMap((ride) =>
+      ride.riders.map((r) => ({ id: r.userId, name: r.name })),
+    ),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -319,7 +328,7 @@ export default async function GroupDetailPage({
                           <p className="text-xs text-gray-500">{dateStr}</p>
                         )}
                         <p className="text-xs text-gray-400 mt-1">
-                          {ride.riders.map((r) => r.name.split(" ")[0]).join(", ")}
+                          {ride.riders.map((r) => riderNames.get(r.userId)).join(", ")}
                         </p>
                       </div>
                       {ride.totalPence > 0 && (

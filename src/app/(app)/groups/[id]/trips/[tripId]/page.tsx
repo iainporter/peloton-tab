@@ -6,6 +6,7 @@ import { TripStatusBadge } from "@/components/trip-status-badge";
 import { getTripForGroupMember, getTripLedger } from "@/lib/trip-data";
 import { formatBalance, formatMoney } from "@/lib/money";
 import { formatTripDates } from "@/lib/trips";
+import { shortNames } from "@/lib/names";
 
 export default async function TripDetailPage({
   params,
@@ -26,6 +27,7 @@ export default async function TripDetailPage({
 
   const currency = trip.baseCurrency;
   const memberMap = new Map(members.map((m) => [m.id, m]));
+  const memberNames = shortNames(members);
   const isTripMember = memberMap.has(userId);
   const canEdit = isTripMember && trip.status === "open";
   const myBalance = balances.find((b) => b.userId === userId)?.balance ?? 0;
@@ -204,7 +206,7 @@ export default async function TripDetailPage({
                             {everyone
                               ? "Split between everyone"
                               : `Split between ${expense.participantIds
-                                  .map((id) => memberMap.get(id)?.name.split(" ")[0])
+                                  .map((id) => memberNames.get(id))
                                   .filter(Boolean)
                                   .join(", ")}`}
                           </p>

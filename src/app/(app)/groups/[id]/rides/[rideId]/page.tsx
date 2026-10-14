@@ -12,6 +12,7 @@ import { EditPaymentButton } from "./components/edit-payment-button";
 import { PendingPayments } from "@/components/pending-payments";
 import { AddRiderButton } from "./components/add-rider-button";
 import { RemoveRiderButton } from "./components/remove-rider-button";
+import { shortNames } from "@/lib/names";
 
 export default async function RideDetailPage({
   params,
@@ -67,6 +68,7 @@ export default async function RideDetailPage({
 
   const riderIds = new Set(riders.map((r) => r.id));
   const nonRiders = allMembers.filter((m) => !riderIds.has(m.id));
+  const riderNames = shortNames([...allMembers, ...riders]);
 
   const ridePayments = await db
     .select({
@@ -182,7 +184,7 @@ export default async function RideDetailPage({
                   groupId={groupId}
                   rideId={rideId}
                   userId={rider.id}
-                  riderName={rider.name.split(" ")[0]}
+                  riderName={riderNames.get(rider.id) ?? rider.name}
                   hasPayments={ridersWithPayments.has(rider.id)}
                 />
               )}

@@ -11,6 +11,7 @@ import {
 import { eq, desc, inArray, sql } from "drizzle-orm";
 import { Card, EmptyState } from "@/components/ui";
 import Link from "next/link";
+import { shortNames, type NamedPerson } from "@/lib/names";
 
 const PAGE_SIZE = 20;
 
@@ -50,8 +51,8 @@ export default async function RidesPage({
   const groupIds = userGroups.map((g) => g.groupId);
   const groupNameMap = new Map(userGroups.map((g) => [g.groupId, g.groupName]));
 
-  // Get total count and paginated rides
-  const [countResult, pageRides] = await Promise.all([
+  // Get total count, paginated rides, and members of each group
+  const [countResult, pageRides, memberRows] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)` })
       .from(rides)
@@ -69,6 +70,15 @@ export default async function RidesPage({
       .orderBy(desc(rides.date))
       .limit(PAGE_SIZE)
       .offset((page - 1) * PAGE_SIZE),
+    db
+      .select({
+        groupId: groupMembers.groupId,
+        id: users.id,
+        name: users.name,
+      })
+      .from(groupMembers)
+      .innerJoin(users, eq(users.id, groupMembers.userId))
+      .where(inArray(groupMembers.groupId, groupIds)),
   ]);
 
   const totalCount = Number(countResult[0]?.count ?? 0);
@@ -116,6 +126,22 @@ export default async function RidesPage({
     }),
   );
 
+  // Short rider names are unique within each group. Riders who've since left
+  // the group still appear on their rides
+  const peopleByGroup = new Map<string, NamedPerson[]>();
+  const addPerson = (groupId: string, person: NamedPerson) => {
+    const people = peopleByGroup.get(groupId) ?? [];
+    people.push(person);
+    peopleByGroup.set(groupId, people);
+  };
+  for (const m of memberRows) addPerson(m.groupId, m);
+  for (const ride of rideDetails) {
+    for (const r of ride.riders) addPerson(ride.groupId, { id: r.userId, name: r.name });
+  }
+  const namesByGroup = new Map(
+    [...peopleByGroup].map(([groupId, people]) => [groupId, shortNames(people)]),
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">All Rides</h1>
@@ -154,7 +180,9 @@ export default async function RidesPage({
                       {ride.groupName}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {ride.riders.map((r) => r.name.split(" ")[0]).join(", ")}
+                      {ride.riders
+                        .map((r) => namesByGroup.get(ride.groupId)?.get(r.userId))
+                        .join(", ")}
                     </p>
                   </div>
                   {ride.totalPence > 0 && (

@@ -32,8 +32,9 @@ function PaymentRow({
 }) {
   const fromYou = from.id === userId;
   const toYou = to.id === userId;
-  const label = `${fromYou ? "You pay" : `${from.name.split(" ")[0]} pays`} ${
-    toYou ? "you" : to.name.split(" ")[0]
+  // Full names, as first names alone are ambiguous when riders share one
+  const label = `${fromYou ? "You pay" : `${from.name} pays`} ${
+    toYou ? "you" : to.name
   }`;
 
   return (
