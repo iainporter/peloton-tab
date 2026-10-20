@@ -95,8 +95,8 @@ export async function getGroupBalances(
     });
   }
 
-  // Sort by balance descending (biggest creditor first)
-  balances.sort((a, b) => b.balance - a.balance);
+  // Sort by balance ascending (biggest debtor first, biggest creditor last)
+  balances.sort((a, b) => a.balance - b.balance);
 
   return balances;
 }

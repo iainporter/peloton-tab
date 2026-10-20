@@ -73,7 +73,7 @@ export function splitEvenly(
  * Calculate balances for every trip member (and anyone else appearing on an expense).
  * Pass only settlement payments that have been marked as paid.
  * Because splits are exact, balances always sum to zero.
- * Sorted by balance descending (biggest creditor first).
+ * Sorted by balance ascending (biggest debtor first, biggest creditor last).
  */
 export function computeTripBalances(
   memberIds: string[],
@@ -114,7 +114,7 @@ export function computeTripBalances(
     ...b,
     balance: b.paid - b.share + b.sent - b.received,
   }));
-  result.sort((a, b) => b.balance - a.balance);
+  result.sort((a, b) => a.balance - b.balance);
 
   return result;
 }

@@ -67,9 +67,9 @@ describe("computeTripBalances", () => {
       ],
     );
     expect(balances).toEqual([
-      { userId: "alice", paid: 6000, share: 2000, sent: 0, received: 0, balance: 4000 },
       { userId: "bob", paid: 0, share: 2000, sent: 0, received: 0, balance: -2000 },
       { userId: "carol", paid: 0, share: 2000, sent: 0, received: 0, balance: -2000 },
+      { userId: "alice", paid: 6000, share: 2000, sent: 0, received: 0, balance: 4000 },
     ]);
   });
 
@@ -98,7 +98,7 @@ describe("computeTripBalances", () => {
     );
   });
 
-  it("sorts by balance descending", () => {
+  it("sorts by balance ascending (biggest debtor first)", () => {
     const balances = computeTripBalances(
       ["a", "b", "c"],
       [
@@ -106,7 +106,7 @@ describe("computeTripBalances", () => {
         { id: "2", paidBy: "b", baseAmount: 600, participantIds: ["a", "b", "c"] },
       ],
     );
-    expect(balances.map((b) => b.userId)).toEqual(["c", "b", "a"]);
+    expect(balances.map((b) => b.userId)).toEqual(["a", "b", "c"]);
   });
 
   it("applies paid settlements", () => {
