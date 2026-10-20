@@ -77,6 +77,13 @@ export default async function GroupDetailPage({
   // Build balance map for quick lookup
   const balanceMap = new Map(balances.map((b) => [b.userId, b]));
 
+  // Biggest debtor first, biggest creditor last
+  const sortedMembers = [...members].sort(
+    (a, b) =>
+      (balanceMap.get(a.id)?.balance ?? 0) -
+      (balanceMap.get(b.id)?.balance ?? 0),
+  );
+
   // Get rider counts, payment details, and rider names for each ride (activity feed)
   const rideDetails = await Promise.all(
     allRides.map(async (ride) => {
@@ -154,7 +161,7 @@ export default async function GroupDetailPage({
           </Card>
         ) : (
           <Card className="divide-y divide-gray-100 p-0">
-            {members.map((member) => {
+            {sortedMembers.map((member) => {
               const bal = balanceMap.get(member.id);
               const balance = bal?.balance ?? 0;
               return (
